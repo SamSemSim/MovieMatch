@@ -2,7 +2,7 @@
 
 A modern web application that provides personalized movie and TV show recommendations based on your viewing preferences. Built with Flask and powered by TMDB and Jikan APIs.
 
-![MovieMatch Screenshot](screenshot.png)
+
 
 ## Features
 
