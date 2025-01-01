@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Ratings - MovieMatch</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-bg: #0f0f0f;
+            --secondary-bg: #1a1a1a;
+            --card-bg: #242424;
+            --text-primary: #ffffff;
+            --text-secondary: #b3b3b3;
+            --accent-color: #e50914;
+            --accent-hover: #f40612;
+            --rating-color: #ffd700;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding-top: 76px;
+        }
+
+        /* Navbar Styles */
+        .navbar {
+            background-color: var(--primary-bg) !important;
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            transition: background-color 0.3s;
+        }
+
+        .navbar.scrolled {
+            background-color: rgba(15, 15, 15, 0.95) !important;
+            backdrop-filter: blur(10px);
+        }
+
+        .navbar-brand {
+            color: var(--accent-color) !important;
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .nav-link {
+            color: var(--text-primary) !important;
+            font-size: 1.1rem;
+            margin: 0 1rem;
+            position: relative;
+            transition: color 0.3s;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -5px;
+            left: 0;
+            background-color: var(--accent-color);
+            transition: width 0.3s;
+        }
+
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 100%;
+        }
+
+        /* Ratings Container */
+        .ratings-container {
+            background: linear-gradient(to bottom, var(--secondary-bg), var(--primary-bg));
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .section-title {
+            color: var(--text-primary);
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            position: relative;
+            padding-bottom: 1rem;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 60px;
+            height: 4px;
+            background-color: var(--accent-color);
+            border-radius: 2px;
+        }
+
+        /* Filter Buttons */
+        .filter-section {
+            margin-bottom: 2rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            background-color: var(--card-bg);
+            color: var(--text-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.6rem 1.2rem;
+            border-radius: 25px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            background-color: rgba(229, 9, 20, 0.1);
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .filter-btn.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        /* Rating Cards */
+        .rating-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .rating-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .rating-poster {
+            width: 120px;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 1.5rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s;
+        }
+
+        .rating-card:hover .rating-poster {
+            transform: scale(1.05);
+        }
+
+        .rating-info {
+            flex-grow: 1;
+        }
+
+        .rating-title {
+            color: var(--text-primary);
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .rating-meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .rating-stars {
+            color: var(--rating-color);
+            font-size: 1.2rem;
+            display: flex;
+            gap: 0.3rem;
+        }
+
+        .rating-type-badge {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .delete-rating {
+            color: var(--text-secondary);
+            cursor: pointer;
+            margin-left: 1.5rem;
+            font-size: 1.2rem;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.3s;
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        .delete-rating:hover {
+            color: #dc3545;
+            background-color: rgba(220, 53, 69, 0.2);
+            transform: scale(1.1);
+        }
+
+        .no-ratings {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 4rem 2rem;
+        }
+
+        .no-ratings i {
+            font-size: 4rem;
+            color: var(--accent-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .no-ratings p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .no-ratings .btn-primary {
+            background-color: var(--accent-color);
+            border: none;
+            padding: 0.8rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .no-ratings .btn-primary:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .rating-card {
+                flex-direction: column;
+                text-align: center;
+                padding: 1rem;
+            }
+
+            .rating-poster {
+                width: 100%;
+                height: 200px;
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+
+            .rating-title {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .rating-stars {
+                justify-content: center;
+            }
+
+            .delete-rating {
+                margin: 1rem 0 0 0;
+            }
+
+            .section-title {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-film me-2"></i>MovieMatch
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <i class="fas fa-bars" style="color: var(--text-primary);"></i>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-home me-2"></i>Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/my_ratings">
+                            <i class="fas fa-star me-2"></i>My Ratings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/recommendations">
+                            <i class="fas fa-thumbs-up me-2"></i>Recommendations
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="ratings-container">
+            <h2 class="section-title">My Ratings</h2>
+            
+            <div class="filter-section">
+                <button class="btn filter-btn active" data-filter="all">
+                    <i class="fas fa-th-list me-2"></i>All
+                </button>
+                <button class="btn filter-btn" data-filter="movie">
+                    <i class="fas fa-film me-2"></i>Movies
+                </button>
+                <button class="btn filter-btn" data-filter="tv">
+                    <i class="fas fa-tv me-2"></i>TV Shows
+                </button>
+                <button class="btn filter-btn" data-rating="5">
+                    <i class="fas fa-star me-2"></i>5 Stars
+                </button>
+                <button class="btn filter-btn" data-rating="4">
+                    <i class="fas fa-star-half-alt me-2"></i>4+ Stars
+                </button>
+            </div>
+
+            <div id="ratings-list">
+                {% if ratings %}
+                    {% for rating in ratings %}
+                    <div class="rating-card" data-media-type="{{ rating.media_type }}" data-rating="{{ rating.rating }}" onclick="showMovieDetails({
+                        id: {{ rating.tmdb_id or rating.mal_id }},
+                        title: '{{ rating.title | replace("'", "\\'") }}',
+                        overview: '{{ rating.overview | replace("'", "\\'") if rating.overview else "No overview available" }}',
+                        vote_average: {{ rating.vote_average or 0 }},
+                        poster_path: '{{ rating.image_url if rating.media_type == "anime" else rating.poster_path }}',
+                        media_type: '{{ rating.media_type }}'
+                    })">
+                        {% if rating.media_type == 'anime' %}
+                            <img src="{{ rating.image_url or 'https://via.placeholder.com/300x450?text=No+Image' }}" 
+                                 class="rating-poster" 
+                                 alt="{{ rating.title }}" 
+                                 onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                        {% else %}
+                            <img src="{{ 'https://image.tmdb.org/t/p/w500' + rating.poster_path if rating.poster_path else 'https://via.placeholder.com/300x450?text=No+Image' }}" 
+                                 class="rating-poster" 
+                                 alt="{{ rating.title }}" 
+                                 onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                        {% endif %}
+                        <div class="rating-info">
+                            <div class="rating-title">
+                                {{ rating.title }}
+                                <span class="rating-type-badge">
+                                    <i class="fas {{ 'fa-play-circle' if rating.media_type == 'anime' else 'fa-film' if rating.media_type == 'movie' else 'fa-tv' }}"></i>
+                                    {{ rating.media_type | upper }}
+                                </span>
+                            </div>
+                            <div class="rating-meta">
+                                <i class="fas fa-star" style="color: var(--rating-color);"></i>
+                                {{ rating.vote_average|round(1) if rating.vote_average else 'N/A' }}/10
+                            </div>
+                            <div class="rating-stars">
+                                {% for i in range(rating.rating|int) %}
+                                <i class="fas fa-star" style="color: var(--rating-color);"></i>
+                                {% endfor %}
+                                {% for i in range(5 - (rating.rating|int)) %}
+                                <i class="far fa-star" style="color: var(--rating-color);"></i>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="delete-rating" onclick="event.stopPropagation(); deleteRating({{ rating.id }})">
+                            <i class="fas fa-trash-alt"></i>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-ratings">
+                        <i class="fas fa-film"></i>
+                        <p>You haven't rated any movies, TV shows, or anime yet.</p>
+                        <a href="/" class="btn btn-primary">
+                            <i class="fas fa-search me-2"></i>Start Rating
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Movie Detail Modal -->
+    <div class="modal fade" id="movieModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <img class="detail-poster img-fluid mb-3" src="" alt="">
+                            <div class="meta-info">
+                                <p><i class="fas fa-calendar-alt me-2"></i><span class="release-date"></span></p>
+                                <p><i class="fas fa-clock me-2"></i><span class="runtime"></span></p>
+                                <p><i class="fas fa-star me-2"></i><span class="vote-average"></span></p>
+                            </div>
+                            <div class="rating-section">
+                                <h6 class="text-accent">Your Rating</h6>
+                                <div class="modal-rating"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="genres mb-3"></div>
+                            <h6 class="text-accent mb-3">Overview</h6>
+                            <p class="overview overview-text mb-4"></p>
+                            <h6 class="text-accent mb-3">Trailers & Videos</h6>
+                            <div class="videos-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let movieModal = new bootstrap.Modal(document.getElementById('movieModal'));
+
+        async function showMovieDetails(item) {
+            const modal = document.getElementById('movieModal');
+            
+            modal.querySelector('.modal-title').textContent = item.title;
+            
+            const posterUrl = item.media_type === 'anime' 
+                ? item.poster_path 
+                : `https://image.tmdb.org/t/p/w500${item.poster_path}`;
+            modal.querySelector('.detail-poster').src = posterUrl || 'https://via.placeholder.com/300x450?text=No+Image';
+            
+            modal.querySelector('.overview').textContent = item.overview || 'No overview available';
+            modal.querySelector('.vote-average').textContent = `${item.vote_average}/10`;
+            
+            try {
+                const response = await fetch('/get_details', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        media_type: item.media_type,
+                        tmdb_id: item.id
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Failed to fetch details');
+                
+                const details = await response.json();
+                
+                // Update genres with badges
+                const genresContainer = modal.querySelector('.genres');
+                genresContainer.innerHTML = (details.genres || []).map(genre => 
+                    `<span class="genre-badge">${genre.name}</span>`
+                ).join('');
+
+                // Update runtime/episodes
+                const runtimeText = item.media_type === 'anime' 
+                    ? `${details.episodes || '?'} episodes` 
+                    : (details.runtime ? `${details.runtime} minutes` : 'N/A');
+                modal.querySelector('.runtime').textContent = runtimeText;
+
+                // Add release date
+                const releaseDate = details.release_date || details.first_air_date || details.aired || 'N/A';
+                modal.querySelector('.release-date').textContent = releaseDate;
+
+                // Add videos
+                const videosContainer = modal.querySelector('.videos-container');
+                videosContainer.innerHTML = '';
+                
+                if (details.videos && details.videos.results && details.videos.results.length > 0) {
+                    const trailers = details.videos.results.filter(video => 
+                        video.type === 'Trailer' && video.site === 'YouTube'
+                    );
+                    
+                    if (trailers.length > 0) {
+                        trailers.slice(0, 2).forEach(video => {
+                            const videoDiv = document.createElement('div');
+                            videoDiv.className = 'video-container mb-3';
+                            videoDiv.innerHTML = `
+                                <iframe
+                                    width="100%"
+                                    height="315"
+                                    src="https://www.youtube-nocookie.com/embed/${video.key}?rel=0&modestbranding=1"
+                                    frameborder="0"
+                                    allow="encrypted-media; picture-in-picture"
+                                    loading="lazy"
+                                    title="Trailer"
+                                    allowfullscreen>
+                                </iframe>
+                            `;
+                            videosContainer.appendChild(videoDiv);
+                        });
+                    } else {
+                        videosContainer.innerHTML = '<p class="text-secondary">No trailers available</p>';
+                    }
+                } else {
+                    videosContainer.innerHTML = '<p class="text-secondary">No videos available</p>';
+                }
+            } catch (error) {
+                console.error('Error fetching details:', error);
+            }
+
+            movieModal.show();
+        }
+
+        async function deleteRating(ratingId) {
+            if (!confirm('Are you sure you want to delete this rating?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/delete_rating/${ratingId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Failed to delete rating');
+                }
+            } catch (error) {
+                console.error('Error deleting rating:', error);
+                alert('Failed to delete rating');
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieMatch - Movie & TV Show Recommendations</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-bg: #0f0f0f;
+            --secondary-bg: #1a1a1a;
+            --card-bg: #242424;
+            --text-primary: #ffffff;
+            --text-secondary: #b3b3b3;
+            --accent-color: #e50914;
+            --accent-hover: #f40612;
+            --rating-color: #ffd700;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Navbar Styles */
+        .navbar {
+            background-color: var(--primary-bg) !important;
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            transition: background-color 0.3s;
+        }
+
+        .navbar.scrolled {
+            background-color: rgba(15, 15, 15, 0.95) !important;
+            backdrop-filter: blur(10px);
+        }
+
+        .navbar-brand {
+            color: var(--accent-color) !important;
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .nav-link {
+            color: var(--text-primary) !important;
+            font-size: 1.1rem;
+            margin: 0 1rem;
+            position: relative;
+            transition: color 0.3s;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -5px;
+            left: 0;
+            background-color: var(--accent-color);
+            transition: width 0.3s;
+        }
+
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 100%;
+        }
+
+        /* Search Container */
+        .search-container {
+            background: linear-gradient(to bottom, var(--secondary-bg), var(--primary-bg));
+            padding: 8rem 0 4rem;
+            margin-bottom: 2rem;
+        }
+
+        .search-card {
+            background-color: rgba(36, 36, 36, 0.8);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .search-input {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-primary);
+            border-radius: 8px;
+            padding: 0.8rem 1.2rem;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2);
+            color: var(--text-primary);
+        }
+
+        .btn-search {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-search:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        /* Movie Cards */
+        .media-card {
+            background-color: var(--card-bg);
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            height: 100%;
+            position: relative;
+        }
+
+        .media-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .poster-container {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .poster-img {
+            height: 400px;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .media-card:hover .poster-img {
+            transform: scale(1.05);
+        }
+
+        .card-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.8));
+            opacity: 0;
+            transition: opacity 0.3s;
+            display: flex;
+            align-items: flex-end;
+            padding: 1.5rem;
+        }
+
+        .media-card:hover .card-overlay {
+            opacity: 1;
+        }
+
+        .imdb-rating {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: var(--rating-color);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            backdrop-filter: blur(4px);
+            z-index: 2;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+            background: linear-gradient(to bottom, var(--card-bg), rgba(36, 36, 36, 0.95));
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .card-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Rating Stars */
+        .rating {
+            padding: 0.5rem 0;
+        }
+
+        .star {
+            cursor: pointer;
+            transition: color 0.3s, transform 0.2s;
+        }
+
+        .star:hover {
+            transform: scale(1.2);
+        }
+
+        /* Section Titles */
+        .section-title {
+            color: var(--text-primary);
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            position: relative;
+            padding-bottom: 1rem;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 60px;
+            height: 4px;
+            background-color: var(--accent-color);
+            border-radius: 2px;
+        }
+
+        /* Modal Styles */
+        .modal-content {
+            background-color: var(--secondary-bg);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+        }
+
+        .modal-title {
+            color: var(--accent-color);
+            font-weight: 700;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .detail-poster {
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .genre-badge {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            margin: 0.25rem;
+            display: inline-block;
+            backdrop-filter: blur(4px);
+        }
+
+        .meta-info {
+            color: var(--text-secondary);
+            margin: 1.5rem 0;
+        }
+
+        .meta-info i {
+            width: 25px;
+            color: var(--accent-color);
+        }
+
+        /* Recommendations Section */
+        .recommendations-section {
+            padding: 2rem 0;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .search-container {
+                padding: 6rem 0 3rem;
+            }
+
+            .section-title {
+                font-size: 1.5rem;
+            }
+
+            .poster-img {
+                height: 300px;
+            }
+        }
+
+        .media-type-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: var(--text-primary);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            backdrop-filter: blur(4px);
+            z-index: 2;
+        }
+
+        .media-type-badge i {
+            color: var(--accent-color);
+        }
+
+        /* Add styles for the media slider */
+        .media-slider {
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            padding-bottom: 1rem;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-color) var(--card-bg);
+        }
+        
+        .media-slider::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .media-slider::-webkit-scrollbar-track {
+            background: var(--card-bg);
+            border-radius: 4px;
+        }
+        
+        .media-slider::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 4px;
+        }
+        
+        .media-slider .col-md-3 {
+            min-width: 250px;
+            margin-right: 1rem;
+        }
+        
+        .top-rated-section {
+            position: relative;
+        }
+        
+        .section-title .btn-outline-danger {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            font-size: 0.9rem;
+            padding: 0.25rem 0.75rem;
+        }
+        
+        .section-title .btn-outline-danger:hover {
+            background-color: var(--accent-color);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-film me-2"></i>MovieMatch
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <i class="fas fa-bars" style="color: var(--text-primary);"></i>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">
+                            <i class="fas fa-home me-2"></i>Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/my_ratings">
+                            <i class="fas fa-star me-2"></i>My Ratings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/recommendations">
+                            <i class="fas fa-thumbs-up me-2"></i>Recommendations
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Search Section -->
+    <div class="search-container">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card search-card">
+                        <div class="card-body">
+                            <h5 class="section-title mb-4">Discover Movies & TV Shows</h5>
+                            <div class="input-group">
+                                <input type="text" id="searchInput" class="form-control search-input" 
+                                       placeholder="Search for movies, TV shows, anime...">
+                                <button class="btn btn-search" onclick="search()">
+                                    <i class="fas fa-search me-2"></i>Search
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Search Results Section -->
+        <div id="searchResultsSection" style="display: none;">
+            <h5 class="section-title">Search Results</h5>
+            <div id="searchResults" class="row g-4 mb-5"></div>
+            <button class="btn btn-outline-danger mb-5" onclick="clearSearch()">
+                <i class="fas fa-times me-2"></i>Clear Search
+            </button>
+        </div>
+        
+        <!-- Top Rated Sections -->
+        <div id="mainContent">
+            <div class="top-rated-section mb-5">
+                <h5 class="section-title">Top Rated Movies</h5>
+                <div id="topMovies" class="row g-4 media-slider"></div>
+            </div>
+            
+            <div class="top-rated-section mb-5">
+                <h5 class="section-title">Top Rated TV Shows</h5>
+                <div id="topTVShows" class="row g-4 media-slider"></div>
+            </div>
+            
+            <div class="top-rated-section mb-5">
+                <h5 class="section-title">Top Rated Anime</h5>
+                <div id="topAnime" class="row g-4 media-slider"></div>
+            </div>
+            
+            <div class="recommendations-section">
+                <h5 class="section-title">
+                    Recommended For You
+                    <a href="/recommendations" class="btn btn-outline-danger btn-sm ms-3">
+                        <i class="fas fa-th-list me-2"></i>View All
+                    </a>
+                </h5>
+                <div id="recommendations" class="row g-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Movie Detail Modal -->
+    <div class="modal fade" id="movieModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <img class="detail-poster img-fluid mb-3" src="" alt="">
+                            <div class="meta-info">
+                                <p><i class="fas fa-calendar-alt me-2"></i><span class="release-date"></span></p>
+                                <p><i class="fas fa-clock me-2"></i><span class="runtime"></span></p>
+                                <p><i class="fas fa-star me-2"></i><span class="vote-average"></span></p>
+                            </div>
+                            <div class="rating-section">
+                                <h6 class="text-accent">Your Rating</h6>
+                                <div class="modal-rating"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="genres mb-3"></div>
+                            <h6 class="text-accent mb-3">Overview</h6>
+                            <p class="overview overview-text mb-4"></p>
+                            <h6 class="text-accent mb-3">Trailers & Videos</h6>
+                            <div class="videos-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Add navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        let movieModal;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            movieModal = new bootstrap.Modal(document.getElementById('movieModal'));
+            
+            // Add enter key listener for search
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    search();
+                }
+            });
+            
+            // Load initial content
+            loadTopRated();
+            getRecommendations();
+        });
+
+        function displayResults(results) {
+            const container = document.getElementById('searchResults');
+            container.innerHTML = '';
+            
+            if (!results || results.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No results found. Try a different search term.
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            results.forEach(item => {
+                if (!item) return; // Skip null/undefined items
+                
+                const card = document.createElement('div');
+                card.className = 'col-md-3 mb-4';
+                
+                const posterUrl = item.media_type === 'anime' 
+                    ? (item.poster_path || 'https://via.placeholder.com/300x450?text=No+Image')
+                    : (item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Image');
+                
+                const title = item.title || item.name || 'Unknown Title';
+                const rating = typeof item.vote_average === 'number' ? item.vote_average.toFixed(1) : '0.0';
+                const releaseDate = item.release_date || item.first_air_date || 'N/A';
+                
+                // Get the appropriate icon for the media type
+                let typeIcon;
+                switch(item.media_type) {
+                    case 'movie':
+                        typeIcon = 'fas fa-film';
+                        break;
+                    case 'tv':
+                        typeIcon = 'fas fa-tv';
+                        break;
+                    case 'anime':
+                        typeIcon = 'fas fa-play-circle';
+                        break;
+                    default:
+                        typeIcon = 'fas fa-play';
+                }
+                
+                card.innerHTML = `
+                    <div class="card media-card h-100">
+                        <div class="imdb-rating">
+                            <i class="fas fa-star me-1"></i>${rating}
+                        </div>
+                        <div class="media-type-badge">
+                            <i class="${typeIcon} me-1"></i>${item.media_type.toUpperCase()}
+                        </div>
+                        <img src="${posterUrl}" 
+                             class="card-img-top poster-img" 
+                             alt="${title}"
+                             onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                        <div class="card-body">
+                            <h6 class="card-title">${title}</h6>
+                            <p class="card-text small">${releaseDate}</p>
+                            <div class="rating" 
+                                 data-title="${title}" 
+                                 data-media-type="${item.media_type}" 
+                                 data-tmdb-id="${item.id}"
+                                 data-current-rating="0">
+                                ${generateStars()}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                const cardElement = card.querySelector('.card');
+                cardElement.addEventListener('click', (e) => {
+                    if (!e.target.closest('.rating')) {
+                        showMovieDetails(item, item.media_type || (item.first_air_date ? 'tv' : 'movie'));
+                    }
+                });
+                
+                container.appendChild(card);
+                
+                // Add rating functionality
+                const ratingDiv = card.querySelector('.rating');
+                addRatingEventListeners(ratingDiv);
+            });
+        }
+
+        function displayRecommendations(recommendations) {
+            const container = document.getElementById('recommendations');
+            container.innerHTML = '';
+            
+            recommendations.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'col-md-3';
+                
+                const posterUrl = item.media_type === 'anime' 
+                    ? item.poster_path 
+                    : `https://image.tmdb.org/t/p/w500${item.poster_path}`;
+                    
+                card.innerHTML = `
+                    <div class="card media-card h-100">
+                        <div class="imdb-rating">
+                            <i class="fas fa-star me-1"></i>${item.vote_average.toFixed(1)}
+                        </div>
+                        <img src="${posterUrl || 'https://via.placeholder.com/300x450?text=No+Image'}" 
+                             class="card-img-top poster-img" 
+                             alt="${item.title || item.name}"
+                             onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                        <div class="card-body">
+                            <h6 class="card-title">${item.title || item.name}</h6>
+                            <p class="card-text small">${item.release_date || item.first_air_date || 'N/A'}</p>
+                        </div>
+                    </div>
+                `;
+
+                const cardElement = card.querySelector('.card');
+                cardElement.addEventListener('click', () => {
+                    showMovieDetails(item, item.media_type || (item.first_air_date ? 'tv' : 'movie'));
+                });
+                
+                container.appendChild(card);
+            });
+        }
+
+        async function showMovieDetails(item, mediaType) {
+            const modal = document.getElementById('movieModal');
+            
+            modal.querySelector('.modal-title').textContent = item.title || item.name;
+            
+            const posterUrl = mediaType === 'anime' 
+                ? item.poster_path 
+                : `https://image.tmdb.org/t/p/w500${item.poster_path}`;
+            modal.querySelector('.detail-poster').src = posterUrl || 'https://via.placeholder.com/300x450?text=No+Image';
+            
+            modal.querySelector('.overview').textContent = item.overview || 'No overview available';
+            modal.querySelector('.vote-average').textContent = `${item.vote_average.toFixed(1)}/10`;
+            
+            // Add rating functionality in modal
+            const modalRatingDiv = modal.querySelector('.modal-rating');
+            modalRatingDiv.innerHTML = generateStars();
+            modalRatingDiv.dataset.title = item.title || item.name;
+            modalRatingDiv.dataset.mediaType = mediaType;
+            modalRatingDiv.dataset.tmdbId = item.id;
+            modalRatingDiv.dataset.currentRating = "0";
+            modalRatingDiv.className = 'rating modal-rating';
+            addRatingEventListeners(modalRatingDiv);
+
+            try {
+                const response = await fetch('/get_details', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        media_type: mediaType,
+                        tmdb_id: item.id
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Failed to fetch details');
+                
+                const details = await response.json();
+                
+                // Update genres with badges
+                const genresContainer = modal.querySelector('.genres');
+                genresContainer.innerHTML = (details.genres || []).map(genre => 
+                    `<span class="genre-badge">${genre.name}</span>`
+                ).join('');
+
+                // Update runtime/episodes
+                const runtimeText = mediaType === 'anime' 
+                    ? `${details.episodes || '?'} episodes` 
+                    : (details.runtime ? `${details.runtime} minutes` : 'N/A');
+                modal.querySelector('.runtime').textContent = runtimeText;
+
+                // Add release date
+                const releaseDate = details.release_date || details.first_air_date || details.aired || 'N/A';
+                modal.querySelector('.release-date').textContent = releaseDate;
+
+                // Add videos
+                const videosContainer = modal.querySelector('.videos-container');
+                videosContainer.innerHTML = '';
+                
+                if (details.videos && details.videos.results && details.videos.results.length > 0) {
+                    const trailers = details.videos.results.filter(video => 
+                        video.type === 'Trailer' && video.site === 'YouTube'
+                    );
+                    
+                    if (trailers.length > 0) {
+                        trailers.slice(0, 2).forEach(video => {
+                            const videoDiv = document.createElement('div');
+                            videoDiv.className = 'video-container mb-3';
+                            videoDiv.innerHTML = `
+                                <iframe
+                                    width="100%"
+                                    height="315"
+                                    src="https://www.youtube.com/embed/${video.key}"
+                                    frameborder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowfullscreen>
+                                </iframe>
+                            `;
+                            videosContainer.appendChild(videoDiv);
+                        });
+                    } else {
+                        videosContainer.innerHTML = '<p class="text-secondary">No trailers available</p>';
+                    }
+                } else {
+                    videosContainer.innerHTML = '<p class="text-secondary">No videos available</p>';
+                }
+
+                // Add additional anime-specific information if available
+                if (mediaType === 'anime' && details.studios) {
+                    const studioText = details.studios.join(', ');
+                    const studioElement = document.createElement('p');
+                    studioElement.className = 'meta-info';
+                    studioElement.innerHTML = `<i class="fas fa-film me-2"></i>Studios: ${studioText}`;
+                    modal.querySelector('.meta-info').appendChild(studioElement);
+                }
+            } catch (error) {
+                console.error('Error fetching details:', error);
+            }
+
+            movieModal.show();
+        }
+
+        // Initial load of recommendations
+        getRecommendations();
+
+        async function search() {
+            const query = document.getElementById('searchInput').value;
+            
+            if (!query.trim()) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Search failed');
+                }
+                
+                if (!data.results || !Array.isArray(data.results)) {
+                    console.error('Invalid results format:', data);
+                    throw new Error('Invalid search results');
+                }
+                
+                // Show search results and hide main content
+                document.getElementById('searchResultsSection').style.display = 'block';
+                document.getElementById('mainContent').style.display = 'none';
+                
+                displayResults(data.results);
+            } catch (error) {
+                console.error('Search error:', error);
+                const container = document.getElementById('searchResults');
+                container.innerHTML = `
+                    <div class="col-12 text-center">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            ${error.message || 'Failed to search. Please try again.'}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function generateStars() {
+            let starsHtml = '';
+            for (let i = 1; i <= 5; i++) {
+                starsHtml += `<i class="star fas fa-star" data-rating="${i}" style="margin-right: 5px; color: var(--text-secondary);"></i>`;
+            }
+            return starsHtml;
+        }
+
+        function updateStars(ratingDiv, rating) {
+            if (!ratingDiv) return;
+            const stars = ratingDiv.querySelectorAll('.star');
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.style.color = 'var(--accent-color)';
+                } else {
+                    star.style.color = 'var(--text-secondary)';
+                }
+            });
+        }
+
+        async function addPreference(title, mediaType, rating, tmdbId) {
+            try {
+                const response = await fetch('/add_preference', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        title, 
+                        media_type: mediaType, 
+                        rating,
+                        tmdb_id: tmdbId
+                    })
+                });
+
+                if (response.ok) {
+                    // Update all instances of this movie's rating
+                    document.querySelectorAll(`.rating[data-title="${title}"]`).forEach(ratingDiv => {
+                        ratingDiv.dataset.currentRating = rating;
+                        updateStars(ratingDiv, rating);
+                    });
+                    // Refresh recommendations
+                    getRecommendations();
+                }
+            } catch (error) {
+                console.error('Error saving rating:', error);
+            }
+        }
+
+        function addRatingEventListeners(ratingDiv) {
+            if (!ratingDiv) return;
+            
+            const stars = ratingDiv.querySelectorAll('.star');
+            const title = ratingDiv.dataset.title;
+            const mediaType = ratingDiv.dataset.mediaType;
+            const tmdbId = parseInt(ratingDiv.dataset.tmdbId);
+
+            // Remove existing event listeners
+            stars.forEach(star => {
+                star.replaceWith(star.cloneNode(true));
+            });
+
+            // Get fresh references after cloning
+            const freshStars = ratingDiv.querySelectorAll('.star');
+
+            // Add hover effect
+            freshStars.forEach((star, index) => {
+                star.addEventListener('mouseenter', () => {
+                    freshStars.forEach((s, i) => {
+                        if (i <= index) {
+                            s.style.color = 'var(--accent-color)';
+                        } else {
+                            s.style.color = 'var(--text-secondary)';
+                        }
+                    });
+                });
+
+                star.addEventListener('mouseleave', () => {
+                    const currentRating = parseInt(ratingDiv.dataset.currentRating) || 0;
+                    updateStars(ratingDiv, currentRating);
+                });
+
+                star.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const rating = index + 1;
+                    ratingDiv.dataset.currentRating = rating;
+                    addPreference(title, mediaType, rating, tmdbId);
+                });
+            });
+
+            // Reset stars when mouse leaves the rating div
+            ratingDiv.addEventListener('mouseleave', () => {
+                const currentRating = parseInt(ratingDiv.dataset.currentRating) || 0;
+                updateStars(ratingDiv, currentRating);
+            });
+
+            // Initialize stars to current rating
+            const currentRating = parseInt(ratingDiv.dataset.currentRating) || 0;
+            updateStars(ratingDiv, currentRating);
+        }
+
+        async function getRecommendations() {
+            const response = await fetch('/get_recommendations');
+            const recommendations = await response.json();
+            displayRecommendations(recommendations);
+        }
+
+        async function loadTopRated() {
+            try {
+                const [moviesResponse, tvResponse, animeResponse] = await Promise.all([
+                    fetch('/top_rated/movie'),
+                    fetch('/top_rated/tv'),
+                    fetch('/top_rated/anime')
+                ]);
+                
+                const movies = await moviesResponse.json();
+                const tvShows = await tvResponse.json();
+                const anime = await animeResponse.json();
+                
+                displayTopRated('topMovies', movies, 'movie');
+                displayTopRated('topTVShows', tvShows, 'tv');
+                displayTopRated('topAnime', anime, 'anime');
+            } catch (error) {
+                console.error('Error loading top rated content:', error);
+            }
+        }
+        
+        function displayTopRated(containerId, items, mediaType) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'col-md-3';
+                
+                const posterUrl = mediaType === 'anime'
+                    ? (item.poster_path || 'https://via.placeholder.com/300x450?text=No+Image')
+                    : (item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Image');
+                
+                const title = item.title || item.name || 'Unknown Title';
+                const rating = typeof item.vote_average === 'number' ? item.vote_average.toFixed(1) : '0.0';
+                const releaseDate = item.release_date || item.first_air_date || 'N/A';
+                
+                card.innerHTML = `
+                    <div class="card media-card h-100">
+                        <div class="imdb-rating">
+                            <i class="fas fa-star me-1"></i>${rating}
+                        </div>
+                        <img src="${posterUrl}" 
+                             class="card-img-top poster-img" 
+                             alt="${title}"
+                             onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                        <div class="card-body">
+                            <h6 class="card-title">${title}</h6>
+                            <p class="card-text small">${releaseDate}</p>
+                            <div class="rating" 
+                                 data-title="${title}" 
+                                 data-media-type="${mediaType}" 
+                                 data-tmdb-id="${item.id}"
+                                 data-current-rating="0">
+                                ${generateStars()}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                const cardElement = card.querySelector('.card');
+                cardElement.addEventListener('click', (e) => {
+                    if (!e.target.closest('.rating')) {
+                        showMovieDetails(item, mediaType);
+                    }
+                });
+                
+                container.appendChild(card);
+                
+                // Add rating functionality
+                const ratingDiv = card.querySelector('.rating');
+                addRatingEventListeners(ratingDiv);
+            });
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchResultsSection').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+        }
+    </script>
+</body>
+</html> 
