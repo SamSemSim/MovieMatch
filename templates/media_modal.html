@@ -1,0 +1,264 @@
+{% macro media_modal() %}
+<!-- Media Details Modal -->
+<div class="modal fade" id="mediaDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <img class="modal-poster img-fluid" alt="Media Poster">
+                        <button class="btn btn-trailer mt-3 w-100" style="display: none;">
+                            <i class="fas fa-play me-2"></i>Watch Trailer
+                        </button>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="modal-year mb-2"></div>
+                        <div class="modal-rating mb-3">
+                            <div class="rating-stars">
+                                {% for i in range(5) %}
+                                <i class="fas fa-star star" data-value="{{ i + 1 }}"></i>
+                                {% endfor %}
+                            </div>
+                            <span class="user-rating-text ms-2">Your Rating: Not rated yet</span>
+                        </div>
+                        <div class="tmdb-rating mb-3">
+                            <span class="text-secondary">TMDB Rating: </span>
+                            <span class="tmdb-rating-value"></span>
+                        </div>
+                        <div class="modal-overview mb-3"></div>
+                        <div class="modal-details">
+                            <div class="genres mb-2"></div>
+                            <div class="runtime mb-2"></div>
+                            <div class="release-date"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="trailer-container mt-3" style="display: none;">
+                    <div class="ratio ratio-16x9">
+                        <iframe class="trailer-frame" src="" allowfullscreen></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Modal Styles */
+    .modal-content {
+        background: var(--card-bg);
+        color: var(--text-primary);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .btn-close {
+        filter: invert(1);
+    }
+
+    .modal-poster {
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-year {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+    }
+
+    .modal-rating .rating-stars {
+        display: inline-flex;
+        gap: 0.25rem;
+    }
+
+    .modal-rating .star {
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .modal-rating .star.active {
+        color: var(--rating-color);
+    }
+
+    .modal-rating .star:hover {
+        transform: scale(1.2);
+        color: var(--rating-color);
+    }
+
+    .modal-overview {
+        line-height: 1.6;
+        color: var(--text-primary);
+    }
+
+    .modal-details {
+        color: var(--text-secondary);
+    }
+
+    .user-rating-text {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .btn-trailer {
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-trailer:hover {
+        background: #ff0f23;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .trailer-container {
+        background: black;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Media card click handler
+    document.querySelector('.media-grid').addEventListener('click', function(e) {
+        const mediaCard = e.target.closest('.media-card');
+        if (!mediaCard) return;
+
+        const mediaId = mediaCard.dataset.id;
+        const mediaType = mediaCard.dataset.type;
+
+        // Fetch media details
+        fetch('/get_details', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                media_type: mediaType,
+                tmdb_id: mediaId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const modal = document.getElementById('mediaDetailsModal');
+            
+            // Update basic info
+            modal.querySelector('.modal-title').textContent = data.title;
+            modal.querySelector('.modal-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
+            modal.querySelector('.modal-year').textContent = data.release_date ? new Date(data.release_date).getFullYear() : 'N/A';
+            modal.querySelector('.modal-overview').textContent = data.overview;
+            modal.querySelector('.tmdb-rating-value').textContent = `${(data.vote_average/2).toFixed(1)}/5`;
+            
+            // Update genres
+            const genres = data.genres.map(genre => genre.name).join(', ');
+            modal.querySelector('.genres').textContent = `Genres: ${genres}`;
+            
+            // Update runtime
+            if (data.runtime) {
+                const hours = Math.floor(data.runtime / 60);
+                const minutes = data.runtime % 60;
+                modal.querySelector('.runtime').textContent = `Runtime: ${hours}h ${minutes}m`;
+            }
+            
+            // Update release date
+            modal.querySelector('.release-date').textContent = `Release Date: ${data.release_date || 'N/A'}`;
+
+            // Handle trailer button
+            const trailerBtn = modal.querySelector('.btn-trailer');
+            const trailerContainer = modal.querySelector('.trailer-container');
+            const trailerFrame = modal.querySelector('.trailer-frame');
+            
+            if (data.videos && data.videos.results && data.videos.results.length > 0) {
+                const trailer = data.videos.results.find(video => video.type === 'Trailer') || data.videos.results[0];
+                trailerBtn.style.display = 'block';
+                trailerBtn.onclick = () => {
+                    trailerContainer.style.display = 'block';
+                    trailerFrame.src = `https://www.youtube.com/embed/${trailer.key}`;
+                };
+            } else {
+                trailerBtn.style.display = 'none';
+                trailerContainer.style.display = 'none';
+            }
+
+            // Initialize rating stars
+            const stars = modal.querySelectorAll('.rating-stars .star');
+            stars.forEach((star, index) => {
+                star.classList.remove('active');
+                star.onclick = () => rateMedia(mediaId, mediaType, index + 1);
+                if (data.user_rating && index < data.user_rating) {
+                    star.classList.add('active');
+                }
+            });
+
+            // Update rating text
+            modal.querySelector('.user-rating-text').textContent = data.user_rating ? 
+                `Your Rating: ${data.user_rating}/5` : 'Your Rating: Not rated yet';
+
+            // Show modal
+            new bootstrap.Modal(modal).show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error loading media details. Please try again.', 'error');
+        });
+    });
+
+    // Clean up when modal is hidden
+    document.getElementById('mediaDetailsModal').addEventListener('hidden.bs.modal', function() {
+        const trailerFrame = this.querySelector('.trailer-frame');
+        if (trailerFrame) {
+            trailerFrame.src = '';
+        }
+        this.querySelector('.trailer-container').style.display = 'none';
+    });
+
+    // Function to handle rating
+    function rateMedia(mediaId, mediaType, rating) {
+        fetch('/add_preference', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                media_type: mediaType,
+                tmdb_id: mediaId,
+                rating: rating,
+                title: document.querySelector('#mediaDetailsModal .modal-title').textContent
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                const modal = document.getElementById('mediaDetailsModal');
+                const stars = modal.querySelectorAll('.rating-stars .star');
+                stars.forEach((star, index) => {
+                    star.classList.toggle('active', index < rating);
+                });
+                modal.querySelector('.user-rating-text').textContent = `Your Rating: ${rating}/5`;
+                
+                showToast('Rating saved successfully!', 'success');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error saving rating. Please try again.', 'error');
+        });
+    }
+});
+</script>
+{% endmacro %} 

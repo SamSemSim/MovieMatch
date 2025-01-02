@@ -1,0 +1,32 @@
+{% macro media_card(media) %}
+<div class="media-card" data-id="{{ media.id }}" data-type="{{ media.media_type }}">
+    <div class="media-type-badge">
+        <i class="fas {% if media.media_type == 'movie' %}fa-film{% elif media.media_type == 'tv' %}fa-tv{% else %}fa-play-circle{% endif %}"></i>
+        {{ media.media_type|upper }}
+    </div>
+    <img src="{% if media.media_type == 'anime' %}{{ media.poster_path }}{% else %}https://image.tmdb.org/t/p/w500{{ media.poster_path }}{% endif %}" 
+         alt="{{ media.title }}" 
+         class="media-poster"
+         onerror="this.src='/static/images/no-poster.svg'">
+    <div class="media-info">
+        <h3 class="media-title">{{ media.title }}</h3>
+        <div class="media-year">
+            {{ media.release_date[:4] if media.release_date else 'N/A' }}
+        </div>
+        <div class="media-rating">
+            <div class="rating-stars">
+                {% for i in range(5) %}
+                <i class="fas fa-star star {% if media.user_rating and i < media.user_rating %}active{% elif not media.user_rating and i < (media.vote_average/2)|round(0, 'floor') %}active{% endif %}"></i>
+                {% endfor %}
+            </div>
+            <span class="rating-value">{% if media.user_rating %}{{ media.user_rating }}/5{% else %}{{ '%.1f'|format(media.vote_average/2) }}/5{% endif %}</span>
+        </div>
+        {% if media.user_rating %}
+        <div class="tmdb-rating">
+            <span class="text-secondary">TMDB: {{ '%.1f'|format(media.vote_average/2) }}/5</span>
+        </div>
+        {% endif %}
+        <p class="media-overview">{{ media.overview }}</p>
+    </div>
+</div>
+{% endmacro %} 

@@ -3,6 +3,7 @@ from app import db
 
 class UserPreference(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     media_type = db.Column(db.String(10), nullable=False)  # 'movie', 'tv', or 'anime'
     rating = db.Column(db.Integer, nullable=False)
@@ -25,12 +26,11 @@ class UserPreference(db.Model):
             'rating': self.rating,
             'tmdb_id': self.tmdb_id,
             'mal_id': self.mal_id,
-            'created_at': self.created_at.isoformat(),
             'genres': self.genres,
             'overview': self.overview,
-            'keywords': self.keywords,
             'vote_average': self.vote_average,
             'popularity': self.popularity,
+            'poster_path': self.poster_path,
             'image_url': self.image_url,
-            'poster_path': self.poster_path
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None
         } 

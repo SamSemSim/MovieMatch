@@ -1,17 +1,85 @@
 from datetime import datetime
-from flask import render_template, request, jsonify
+from flask import render_template, request, jsonify, redirect, url_for
 from app import app, db
 from models.user_preference import UserPreference
+from models.user import User
 from services.tmdb_service import search_media, fetch_movie_details, get_media_details, TMDB_API_KEY, TMDB_BASE_URL
 from services.anime_service import search_anime, get_anime_details, format_anime_result, JIKAN_BASE_URL
 from services.recommendation_service import get_recommendations
+from flask_login import login_required, current_user
 import requests
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    try:
+        # Fetch top-rated movies
+        movie_response = requests.get(
+            f'{TMDB_BASE_URL}/movie/top_rated',
+            params={
+                'api_key': TMDB_API_KEY,
+                'language': 'en-US',
+                'page': 1
+            }
+        )
+        movies = movie_response.json().get('results', [])[:8]  # Get top 8 movies
+
+        # Fetch top-rated TV shows
+        tv_response = requests.get(
+            f'{TMDB_BASE_URL}/tv/top_rated',
+            params={
+                'api_key': TMDB_API_KEY,
+                'language': 'en-US',
+                'page': 1
+            }
+        )
+        tv_shows = tv_response.json().get('results', [])[:8]  # Get top 8 TV shows
+
+        # Get user's ratings if logged in
+        user_ratings = {}
+        if current_user.is_authenticated:
+            ratings = UserPreference.query.filter_by(user_id=current_user.id).all()
+            for rating in ratings:
+                if rating.media_type == 'movie' or rating.media_type == 'tv':
+                    user_ratings[f"{rating.media_type}_{rating.tmdb_id}"] = rating.rating
+
+        # Process movies
+        processed_movies = [{
+            'id': movie['id'],
+            'title': movie['title'],
+            'overview': movie['overview'],
+            'poster_path': movie['poster_path'],
+            'vote_average': movie['vote_average'],
+            'release_date': movie['release_date'],
+            'media_type': 'movie',
+            'user_rating': user_ratings.get(f"movie_{movie['id']}")
+        } for movie in movies]
+
+        # Process TV shows
+        processed_tv_shows = [{
+            'id': show['id'],
+            'title': show['name'],
+            'overview': show['overview'],
+            'poster_path': show['poster_path'],
+            'vote_average': show['vote_average'],
+            'release_date': show['first_air_date'],
+            'media_type': 'tv',
+            'user_rating': user_ratings.get(f"tv_{show['id']}")
+        } for show in tv_shows]
+
+        # Combine and sort by rating
+        top_rated = sorted(
+            processed_movies + processed_tv_shows,
+            key=lambda x: x['vote_average'],
+            reverse=True
+        )
+
+        return render_template('index.html', top_rated=top_rated)
+    except Exception as e:
+        print(f"Error fetching top rated media: {str(e)}")
+        return render_template('index.html', top_rated=[])
 
 @app.route('/search', methods=['POST'])
+@login_required
 def search():
     try:
         data = request.get_json()
@@ -26,11 +94,24 @@ def search():
             return jsonify({'error': 'No search query provided'}), 400
             
         all_results = []
+
+        # Get user's ratings if logged in
+        user_ratings = {}
+        if current_user.is_authenticated:
+            ratings = UserPreference.query.filter_by(user_id=current_user.id).all()
+            for rating in ratings:
+                if rating.media_type == 'movie' or rating.media_type == 'tv':
+                    user_ratings[f"{rating.media_type}_{rating.tmdb_id}"] = rating.rating
+                elif rating.media_type == 'anime':
+                    user_ratings[f"anime_{rating.mal_id}"] = rating.rating
         
         # Search for anime
         try:
             anime_results = search_anime(query)
             if anime_results:
+                for item in anime_results:
+                    if item and isinstance(item, dict):
+                        item['user_rating'] = user_ratings.get(f"anime_{item.get('id')}")
                 all_results.extend(anime_results)
         except Exception as e:
             print(f"Anime search error: {str(e)}")
@@ -50,7 +131,8 @@ def search():
                             'overview': item.get('overview', ''),
                             'release_date': item.get('release_date', ''),
                             'first_air_date': item.get('first_air_date', ''),
-                            'media_type': 'movie'
+                            'media_type': 'movie',
+                            'user_rating': user_ratings.get(f"movie_{item.get('id')}")
                         }
                         all_results.append(processed_item)
         except Exception as e:
@@ -71,7 +153,8 @@ def search():
                             'overview': item.get('overview', ''),
                             'release_date': item.get('first_air_date', ''),
                             'first_air_date': item.get('first_air_date', ''),
-                            'media_type': 'tv'
+                            'media_type': 'tv',
+                            'user_rating': user_ratings.get(f"tv_{item.get('id')}")
                         }
                         all_results.append(processed_item)
         except Exception as e:
@@ -88,6 +171,7 @@ def search():
         return jsonify({'error': f'Search failed: {str(e)}'}), 400
 
 @app.route('/add_preference', methods=['POST'])
+@login_required
 def add_preference():
     try:
         data = request.json
@@ -98,16 +182,18 @@ def add_preference():
         title = data['title']
         rating = data['rating']
         
-        # Check if this item is already rated
+        # Check if this item is already rated by the current user
         if media_type == 'anime':
             existing_rating = UserPreference.query.filter_by(
                 mal_id=tmdb_id,
-                media_type='anime'
+                media_type='anime',
+                user_id=current_user.id
             ).first()
         else:
             existing_rating = UserPreference.query.filter_by(
                 tmdb_id=tmdb_id,
-                media_type=media_type
+                media_type=media_type,
+                user_id=current_user.id
             ).first()
         
         if existing_rating:
@@ -123,6 +209,7 @@ def add_preference():
             if details:
                 anime_data = details.get('data', {})
                 preference = UserPreference(
+                    user_id=current_user.id,
                     title=title,
                     media_type='anime',
                     rating=rating,
@@ -132,12 +219,14 @@ def add_preference():
                     keywords=' '.join([genre['name'] for genre in anime_data.get('genres', [])]),
                     vote_average=float(anime_data.get('score', 0)) / 2,  # Convert 10-point scale to 5-point
                     popularity=float(anime_data.get('popularity', 0)),
-                    image_url=anime_data.get('images', {}).get('jpg', {}).get('large_image_url', '')
+                    image_url=anime_data.get('images', {}).get('jpg', {}).get('large_image_url', ''),
+                    release_date=anime_data.get('aired', {}).get('from', '').split('T')[0] if anime_data.get('aired', {}).get('from') else None
                 )
         else:
             details = fetch_movie_details(tmdb_id, media_type)
             if details:
                 preference = UserPreference(
+                    user_id=current_user.id,
                     title=title,
                     media_type=media_type,
                     rating=rating,
@@ -147,18 +236,21 @@ def add_preference():
                     keywords=details.get('keywords', ''),
                     vote_average=float(details.get('vote_average', 0)),
                     popularity=float(details.get('popularity', 0)),
-                    poster_path=details.get('poster_path', '')
+                    poster_path=details.get('poster_path', ''),
+                    release_date=details.get('release_date') or details.get('first_air_date')
                 )
             else:
                 # Create a basic preference if details fetch fails
                 preference = UserPreference(
+                    user_id=current_user.id,
                     title=title,
                     media_type=media_type,
                     rating=rating,
                     tmdb_id=tmdb_id,
                     overview='No overview available',
                     vote_average=0,
-                    popularity=0
+                    popularity=0,
+                    release_date=None
                 )
         
         print(f"Adding new preference: {preference.title} ({preference.media_type})")  # Debug log
@@ -172,9 +264,49 @@ def add_preference():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/get_recommendations')
+@login_required
 def get_recommendations_route():
-    recommendations = get_recommendations()
-    return jsonify(recommendations)
+    try:
+        # Get user's ratings
+        user_ratings = {}
+        if current_user.is_authenticated:
+            ratings = UserPreference.query.filter_by(user_id=current_user.id).all()
+            for rating in ratings:
+                if rating.media_type == 'movie' or rating.media_type == 'tv':
+                    user_ratings[f"{rating.media_type}_{rating.tmdb_id}"] = rating.rating
+                elif rating.media_type == 'anime':
+                    user_ratings[f"anime_{rating.mal_id}"] = rating.rating
+
+        # Get recommendations
+        recommendations = get_recommendations()
+
+        # Add user ratings to recommendations
+        for rec in recommendations:
+            if rec.get('media_type') == 'anime':
+                rec['user_rating'] = user_ratings.get(f"anime_{rec.get('id')}")
+            else:
+                rec['user_rating'] = user_ratings.get(f"{rec.get('media_type')}_{rec.get('id')}")
+
+            # Ensure title is set
+            if not rec.get('title'):
+                rec['title'] = rec.get('name', 'Unknown Title')
+
+            # Ensure release_date is set
+            if not rec.get('release_date'):
+                rec['release_date'] = rec.get('first_air_date', 'N/A')
+
+            # Ensure overview is set
+            if not rec.get('overview'):
+                rec['overview'] = 'No overview available'
+
+            # Normalize vote_average to 5-point scale
+            if rec.get('vote_average'):
+                rec['vote_average'] = float(rec['vote_average'])
+
+        return jsonify(recommendations)
+    except Exception as e:
+        print(f"Error getting recommendations: {str(e)}")
+        return jsonify([]), 500
 
 @app.route('/get_details', methods=['POST'])
 def get_details():
@@ -185,6 +317,24 @@ def get_details():
 
         if not media_type or not tmdb_id:
             return jsonify({'error': 'Missing media_type or tmdb_id'}), 400
+
+        # Get user's rating if they're logged in
+        user_rating = None
+        if current_user.is_authenticated:
+            if media_type == 'anime':
+                existing_rating = UserPreference.query.filter_by(
+                    mal_id=tmdb_id,
+                    media_type='anime',
+                    user_id=current_user.id
+                ).first()
+            else:
+                existing_rating = UserPreference.query.filter_by(
+                    tmdb_id=tmdb_id,
+                    media_type=media_type,
+                    user_id=current_user.id
+                ).first()
+            if existing_rating:
+                user_rating = existing_rating.rating
 
         try:
             if media_type == 'anime':
@@ -203,7 +353,8 @@ def get_details():
                         'overview': anime_data.get('synopsis', 'No overview available'),
                         'title': anime_data.get('title', 'Unknown Title'),
                         'vote_average': float(anime_data.get('score', 0)) / 2 if anime_data.get('score') else 0,  # Convert 10-point scale to 5-point
-                        'release_date': anime_data.get('aired', {}).get('string', 'Unknown release date')
+                        'release_date': anime_data.get('aired', {}).get('string', 'Unknown release date'),
+                        'user_rating': user_rating
                     })
             else:
                 # Get movie/TV show details from TMDB
@@ -235,47 +386,46 @@ def get_details():
                         'videos': details.get('videos', {'results': []}),
                         'overview': details.get('overview', 'No overview available'),
                         'title': details.get('title') or details.get('name', 'Unknown Title'),
-                        'vote_average': float(details.get('vote_average', 0)),
-                        'keywords': details.get('keywords', {}).get('keywords', [])
+                        'vote_average': float(details.get('vote_average', 0)) / 2,  # Convert to 5-point scale
+                        'keywords': details.get('keywords', {}).get('keywords', []),
+                        'user_rating': user_rating
                     })
                 
-                print(f"TMDB API error: {response.status_code}")
-                return jsonify({
-                    'error': f'Failed to fetch details from TMDB API: {response.status_code}'
-                }), response.status_code
-
-        except (IndexError, KeyError, ValueError, TypeError) as e:
-            print(f"Error processing details: {str(e)}")
-            # Return a valid response with default values instead of failing
-            return jsonify({
-                'genres': [],
-                'runtime': None,
-                'release_date': 'Unknown release date',
-                'poster_path': '',
-                'videos': {'results': []},
-                'overview': 'No overview available',
-                'title': 'Unknown Title',
-                'vote_average': 0,
-                'keywords': []
-            })
+        except Exception as e:
+            print(f"Error fetching details: {str(e)}")
+            return jsonify({'error': str(e)}), 500
 
     except Exception as e:
-        print(f"Error fetching details: {str(e)}")
-        return jsonify({
-            'error': f'Failed to fetch details: {str(e)}'
-        }), 500
+        print(f"Error in get_details: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/my_ratings')
+@login_required
 def my_ratings():
     try:
-        # Get all user preferences ordered by rating and created_at
-        ratings = UserPreference.query.order_by(
+        # Get all user preferences for the current user ordered by rating and created_at
+        ratings = UserPreference.query.filter_by(user_id=current_user.id).order_by(
             UserPreference.rating.desc(),
             UserPreference.created_at.desc()
         ).all()
         
-        # Convert ratings to dictionary format
-        ratings_list = [rating.to_dict() for rating in ratings]
+        # Convert ratings to dictionary format and fetch additional details
+        ratings_list = []
+        for rating in ratings:
+            rating_dict = rating.to_dict()
+            
+            # Fetch additional details for each item
+            if rating.media_type == 'anime':
+                details = get_anime_details(rating.mal_id)
+                if details:
+                    anime_data = details.get('data', {})
+                    rating_dict['release_date'] = anime_data.get('aired', {}).get('from', '').split('T')[0] if anime_data.get('aired', {}).get('from') else None
+            else:
+                details = fetch_movie_details(rating.tmdb_id, rating.media_type)
+                if details:
+                    rating_dict['release_date'] = details.get('release_date') or details.get('first_air_date')
+            
+            ratings_list.append(rating_dict)
         
         # Group ratings by media type for filtering
         media_types = set(rating.media_type for rating in ratings)
@@ -290,13 +440,18 @@ def my_ratings():
         return render_template('my_ratings.html', ratings=[], media_types=set())
 
 @app.route('/delete_rating/<int:rating_id>', methods=['DELETE'])
+@login_required
 def delete_rating(rating_id):
     rating = UserPreference.query.get_or_404(rating_id)
+    # Check if the rating belongs to the current user
+    if rating.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
     db.session.delete(rating)
     db.session.commit()
     return jsonify({'message': 'Rating deleted successfully'})
 
 @app.route('/recommendations')
+@login_required
 def recommendations_page():
     return render_template('recommendations.html')
 

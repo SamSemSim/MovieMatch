@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Profile{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .profile-container {
+        max-width: 800px;
+        margin: 4rem auto;
+        padding: 2rem;
+    }
+
+    .profile-header {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .profile-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 100px;
+        background: linear-gradient(45deg, var(--accent-color), #ff4b2b);
+        opacity: 0.1;
+    }
+
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        margin-bottom: 1.5rem;
+        border: 4px solid var(--card-bg);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        position: relative;
+        z-index: 1;
+    }
+
+    .profile-name {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(45deg, var(--accent-color), #ff4b2b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .profile-email {
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+    }
+
+    .profile-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--accent-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .profile-section {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .section-title i {
+        color: var(--accent-color);
+    }
+
+    .activity-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .activity-item {
+        padding: 1rem;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .activity-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateX(5px);
+    }
+
+    .activity-poster {
+        width: 60px;
+        height: 90px;
+        border-radius: 4px;
+        object-fit: cover;
+    }
+
+    .activity-content {
+        flex-grow: 1;
+    }
+
+    .activity-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .activity-meta {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .activity-rating {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .activity-rating i {
+        color: var(--rating-color);
+        font-size: 0.9rem;
+    }
+
+    .no-activity {
+        text-align: center;
+        color: var(--text-secondary);
+        padding: 2rem;
+    }
+
+    .no-activity i {
+        font-size: 3rem;
+        color: var(--accent-color);
+        margin-bottom: 1rem;
+    }
+
+    .btn-start-rating {
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        margin-top: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn-start-rating:hover {
+        background: var(--accent-hover);
+        transform: translateY(-2px);
+    }
+
+    .favorite-genres {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .genre-badge {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .genre-badge i {
+        color: var(--accent-color);
+    }
+
+    .genre-count {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-secondary);
+        padding: 0.25rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        margin-left: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <img src="{{ url_for('static', filename='images/default-avatar.png') }}" alt="Profile Avatar" class="profile-avatar">
+        <h1 class="profile-name">{{ user.username }}</h1>
+        <div class="profile-email">{{ user.email }}</div>
+        <div class="profile-stats">
+            <div class="stat-card">
+                <div class="stat-value">{{ user.ratings|length }}</div>
+                <div class="stat-label">Total Ratings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ avg_rating|round(1) }}</div>
+                <div class="stat-label">Average Rating</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ user.created_at.strftime('%b %Y') }}</div>
+                <div class="stat-label">Joined</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="profile-section">
+        <h2 class="section-title">
+            <i class="fas fa-chart-pie"></i>
+            Favorite Genres
+        </h2>
+        {% if favorite_genres %}
+        <div class="favorite-genres">
+            {% for genre in favorite_genres %}
+            <div class="genre-badge">
+                <i class="fas fa-film"></i>
+                {{ genre.name }}
+                <span class="genre-count">{{ genre.count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-activity">
+            <i class="fas fa-chart-pie"></i>
+            <p>No genre preferences yet</p>
+            <p>Rate some movies to see your favorite genres!</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="profile-section">
+        <h2 class="section-title">
+            <i class="fas fa-history"></i>
+            Recent Activity
+        </h2>
+        {% if user.ratings %}
+        <ul class="activity-list">
+            {% for rating in user.ratings[:5] %}
+            <li class="activity-item">
+                <img src="{{ rating.media.poster_url }}" alt="{{ rating.media.title }}" class="activity-poster">
+                <div class="activity-content">
+                    <div class="activity-title">{{ rating.media.title }}</div>
+                    <div class="activity-meta">
+                        <div class="activity-rating">
+                            {% for i in range(5) %}
+                            <i class="fas fa-star{% if i >= rating.rating %} text-secondary{% endif %}"></i>
+                            {% endfor %}
+                        </div>
+                        <span>{{ rating.created_at.strftime('%B %d, %Y') }}</span>
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="no-activity">
+            <i class="fas fa-film"></i>
+            <p>No ratings yet</p>
+            <p>Start rating movies to track your activity!</p>
+            <a href="/" class="btn btn-start-rating">
+                <i class="fas fa-play me-2"></i>Start Rating
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

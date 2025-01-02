@@ -3,18 +3,20 @@ services:
     name: moviematch
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn -c gunicorn_config.py app:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
-      - key: DATABASE_URL
-        fromDatabase:
-          name: moviematch-db
-          property: connectionString
+      - key: FLASK_ENV
+        value: production
       - key: SECRET_KEY
         generateValue: true
       - key: TMDB_API_KEY
         sync: false
+    disk:
+      name: sqlite-data
+      mountPath: /opt/render/project/src/instance
+      sizeGB: 1
 
 databases:
   - name: moviematch-db

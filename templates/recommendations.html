@@ -1,682 +1,670 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Recommendations - MovieMatch</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        :root {
-            --primary-bg: #0f0f0f;
-            --secondary-bg: #1a1a1a;
-            --card-bg: #242424;
-            --text-primary: #ffffff;
-            --text-secondary: #b3b3b3;
-            --accent-color: #e50914;
-            --accent-hover: #f40612;
-            --rating-color: #ffd700;
+{% extends "base.html" %}
+
+{% block title %}Recommendations{% endblock %}
+
+{% block additional_styles %}
+<style>
+    /* Scoping styles to main content only, not affecting navbar */
+    .recommendations-page {
+        --card-bg: #1a1a1a;
+        --text-primary: #ffffff;
+        --text-secondary: #a0a0a0;
+        --accent-color: #e50914;
+        background-color: #141414;
+        color: var(--text-primary);
+        min-height: calc(100vh - 80px);
+        padding-top: 2rem;
+    }
+
+    .recommendations-page .container {
+        padding: 2rem 1rem;
+    }
+
+    /* Media Cards */
+    .media-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .media-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 20px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .media-poster {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+
+    .media-card:hover .media-poster {
+        transform: scale(1.05);
+    }
+
+    .media-info {
+        padding: 1.5rem;
+    }
+
+    .media-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .media-year {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .media-rating {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .tmdb-rating {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .rating-stars {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .star {
+        color: #ccc;
+        cursor: pointer;
+        transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .star.active {
+        color: #ffd700;
+    }
+
+    .star:hover {
+        transform: scale(1.2);
+    }
+
+    .rating-stars:hover .star {
+        color: #ccc;
+    }
+
+    .rating-stars:hover .star:hover,
+    .rating-stars:hover .star:hover ~ .star {
+        color: #ffd700;
+    }
+
+    .rating-value {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-left: 0.5rem;
+    }
+
+    .media-overview {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin-bottom: 1rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .media-type-badge {
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        background: rgba(0, 0, 0, 0.8);
+        color: var(--text-primary);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .media-type-badge i {
+        color: var(--accent-color);
+    }
+
+    /* Media Grid */
+    .media-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 2rem;
+        padding: 2rem 0;
+    }
+
+    /* Filter Controls */
+    .filter-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .media-type-filters {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .media-type-btn {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-secondary);
+        padding: 0.5rem 1.5rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .media-type-btn:hover,
+    .media-type-btn.active {
+        background: var(--accent-color);
+        color: white;
+        border-color: var(--accent-color);
+    }
+
+    /* Modal Styles */
+    .modal-content {
+        background: var(--card-bg);
+        color: var(--text-primary);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-title {
+        color: var(--text-primary);
+    }
+
+    .btn-close {
+        color: var(--text-primary);
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    .modal-body {
+        color: var(--text-secondary);
+    }
+
+    /* Toast Styles */
+    .toast-container {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1050;
+    }
+
+    .toast {
+        background: var(--card-bg);
+        color: var(--text-primary);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .toast.show {
+        opacity: 1;
+    }
+
+    .toast.success i {
+        color: #28a745;
+    }
+
+    .toast.error i {
+        color: #dc3545;
+    }
+
+    /* Section title */
+    .section-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+        color: var(--text-primary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .section-title::after {
+        content: '';
+        flex-grow: 1;
+        height: 2px;
+        background: linear-gradient(to right, var(--accent-color), transparent);
+        margin-left: 1rem;
+    }
+
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-secondary);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        color: var(--accent-color);
+    }
+
+    .empty-state h3 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+    }
+
+    .empty-state p {
+        font-size: 1rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    @media (max-width: 768px) {
+        .filter-controls {
+            flex-direction: column;
+            align-items: stretch;
         }
 
-        body {
-            background-color: var(--primary-bg);
-            color: var(--text-primary);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            min-height: 100vh;
-            padding-top: 76px;
+        .media-type-filters {
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
-        /* Navbar Styles */
-        .navbar {
-            background-color: var(--primary-bg) !important;
-            padding: 1rem 0;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 1000;
-            transition: background-color 0.3s;
+        .media-grid {
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
         }
+    }
 
-        .navbar.scrolled {
-            background-color: rgba(15, 15, 15, 0.95) !important;
-            backdrop-filter: blur(10px);
-        }
+    /* Add to your existing styles */
+    .btn-trailer {
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
 
-        .navbar-brand {
-            color: var(--accent-color) !important;
-            font-size: 1.8rem;
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
+    .btn-trailer:hover {
+        background: var(--accent-hover);
+        transform: translateY(-2px);
+    }
 
-        .nav-link {
-            color: var(--text-primary) !important;
-            font-size: 1.1rem;
-            margin: 0 1rem;
-            position: relative;
-            transition: color 0.3s;
-        }
+    .trailer-container {
+        margin-top: 2rem;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
 
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            width: 0;
-            height: 2px;
-            bottom: -5px;
-            left: 0;
-            background-color: var(--accent-color);
-            transition: width 0.3s;
-        }
+    .trailer-frame {
+        border: none;
+        background: #000;
+    }
+</style>
+{% endblock %}
 
-        .nav-link:hover::after,
-        .nav-link.active::after {
-            width: 100%;
-        }
-
-        /* Media Card Styles */
-        .media-card {
-            position: relative;
-            border-radius: 10px;
-            overflow: hidden;
-            transition: transform 0.3s ease;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            background-color: var(--card-bg);
-            height: 100%;
-        }
-
-        .media-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .card-overlay {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-
-        .media-poster {
-            width: 100%;
-            height: 400px;
-            object-fit: cover;
-            transition: transform 0.3s ease;
-        }
-
-        .media-card:hover .media-poster {
-            transform: scale(1.05);
-        }
-
-        .media-type {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 0.8rem;
-            z-index: 2;
-        }
-
-        .rating {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: var(--rating-color);
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 0.8rem;
-            z-index: 2;
-        }
-
-        .overlay-content {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
-            padding: 20px;
-            transform: translateY(0);
-            transition: transform 0.3s ease;
-        }
-
-        .media-title {
-            color: white;
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .release-date {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin: 5px 0;
-        }
-
-        .hover-info {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .media-card:hover .hover-info {
-            max-height: 200px;
-        }
-
-        .overview {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin: 10px 0;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        /* Filter Section Styles */
-        .filter-section {
-            background-color: var(--secondary-bg);
-            padding: 20px 0;
-            margin-bottom: 30px;
-        }
-
-        .filter-card {
-            background-color: var(--card-bg);
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .filter-btn {
-            background-color: transparent;
-            color: var(--text-secondary);
-            border: 1px solid var(--text-secondary);
-            margin: 5px;
-            transition: all 0.3s ease;
-        }
-
-        .filter-btn:hover,
-        .filter-btn.active {
-            background-color: var(--accent-color);
-            color: white;
-            border-color: var(--accent-color);
-        }
-
-        .section-title {
-            color: var(--text-primary);
-            margin-bottom: 30px;
-            font-size: 2rem;
-            font-weight: 600;
-        }
-
-        /* Modal Styles */
-        .modal-content {
-            background-color: var(--card-bg);
-            color: var(--text-primary);
-        }
-
-        .modal-header {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .modal-title {
-            color: var(--text-primary);
-        }
-
-        .text-accent {
-            color: var(--accent-color);
-        }
-
-        .genre-badge {
-            background-color: var(--accent-color);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 15px;
-            margin-right: 5px;
-            margin-bottom: 5px;
-            display: inline-block;
-            font-size: 0.9rem;
-        }
-
-        .meta-info {
-            color: var(--text-secondary);
-            margin-bottom: 10px;
-        }
-
-        .video-container {
-            position: relative;
-            padding-bottom: 56.25%;
-            height: 0;
-            overflow: hidden;
-        }
-
-        .video-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Responsive Adjustments */
-        @media (max-width: 768px) {
-            .media-poster {
-                height: 300px;
-            }
-
-            .section-title {
-                font-size: 1.5rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-film me-2"></i>MovieMatch
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <i class="fas fa-bars" style="color: var(--text-primary);"></i>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">
-                            <i class="fas fa-home me-2"></i>Home
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/my_ratings">
-                            <i class="fas fa-star me-2"></i>My Ratings
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/recommendations">
-                            <i class="fas fa-thumbs-up me-2"></i>Recommendations
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Filter Section -->
-    <div class="filter-section">
-        <div class="container">
-            <div class="filter-card">
-                <h5 class="mb-3">Filter Recommendations</h5>
-                <div class="d-flex flex-wrap">
-                    <button class="btn filter-btn active" data-filter="all">
-                        <i class="fas fa-th-list me-2"></i>All
-                    </button>
-                    <button class="btn filter-btn" data-filter="movie">
-                        <i class="fas fa-film me-2"></i>Movies
-                    </button>
-                    <button class="btn filter-btn" data-filter="tv">
-                        <i class="fas fa-tv me-2"></i>TV Shows
-                    </button>
-                    <button class="btn filter-btn" data-filter="anime">
-                        <i class="fas fa-play-circle me-2"></i>Anime
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recommendations Content -->
+{% block content %}
+<div class="recommendations-page">
     <div class="container">
         <h2 class="section-title">Recommended For You</h2>
-        <div id="recommendationsList" class="row g-4"></div>
-    </div>
+        
+        <div class="filter-controls">
+            <div class="media-type-filters">
+                <button class="media-type-btn active" data-type="all">
+                    <i class="fas fa-film me-2"></i>All Types
+                </button>
+                <button class="media-type-btn" data-type="movie">
+                    <i class="fas fa-film me-2"></i>Movies
+                </button>
+                <button class="media-type-btn" data-type="tv">
+                    <i class="fas fa-tv me-2"></i>TV Shows
+                </button>
+                <button class="media-type-btn" data-type="anime">
+                    <i class="fas fa-play-circle me-2"></i>Anime
+                </button>
+            </div>
+        </div>
 
-    <!-- Movie Detail Modal -->
-    <div class="modal fade" id="movieModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"></h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="media-grid">
+            <!-- Media cards will be dynamically added here -->
+        </div>
+
+        <!-- Empty state -->
+        <div class="empty-state" style="display: none;">
+            <i class="fas fa-film"></i>
+            <h3>No Recommendations Yet</h3>
+            <p>Rate some movies, TV shows, or anime to get personalized recommendations!</p>
+        </div>
+    </div>
+</div>
+
+<!-- Media Details Modal -->
+<div class="modal fade" id="mediaDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <img class="modal-poster img-fluid" alt="Media Poster">
+                        <button class="btn btn-trailer mt-3 w-100" style="display: none;">
+                            <i class="fas fa-play me-2"></i>Watch Trailer
+                        </button>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="modal-year mb-2"></div>
+                        <div class="modal-rating mb-3">
+                            <div class="rating-stars">
+                                {% for i in range(5) %}
+                                <i class="fas fa-star star" data-value="{{ i + 1 }}"></i>
+                                {% endfor %}
+                            </div>
+                            <span class="user-rating-text ms-2">Your Rating: Not rated yet</span>
+                        </div>
+                        <div class="tmdb-rating mb-3">
+                            <span class="text-secondary">TMDB Rating: </span>
+                            <span class="tmdb-rating-value"></span>
+                        </div>
+                        <div class="modal-overview mb-3"></div>
+                        <div class="modal-details">
+                            <div class="genres mb-2"></div>
+                            <div class="runtime mb-2"></div>
+                            <div class="release-date"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <img class="detail-poster img-fluid mb-3" src="" alt="">
-                            <div class="meta-info">
-                                <p><i class="fas fa-calendar-alt me-2"></i><span class="release-date"></span></p>
-                                <p><i class="fas fa-clock me-2"></i><span class="runtime"></span></p>
-                                <p><i class="fas fa-star me-2"></i><span class="vote-average"></span></p>
-                            </div>
-                            <div class="rating-section">
-                                <h6 class="text-accent">Your Rating</h6>
-                                <div class="modal-rating"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="genres mb-3"></div>
-                            <h6 class="text-accent mb-3">Overview</h6>
-                            <p class="overview overview-text mb-4"></p>
-                            <h6 class="text-accent mb-3">Trailers & Videos</h6>
-                            <div class="videos-container"></div>
-                        </div>
+                <!-- Add trailer modal -->
+                <div class="trailer-container mt-3" style="display: none;">
+                    <div class="ratio ratio-16x9">
+                        <iframe class="trailer-frame" src="" allowfullscreen></iframe>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        let movieModal;
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            movieModal = new bootstrap.Modal(document.getElementById('movieModal'));
-            loadRecommendations();
+<!-- Toast Container -->
+<div class="toast-container"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mediaTypeButtons = document.querySelectorAll('.media-type-btn');
+    const mediaGrid = document.querySelector('.media-grid');
+    const emptyState = document.querySelector('.empty-state');
+
+    // Fetch recommendations when page loads
+    fetch('/get_recommendations')
+        .then(response => response.json())
+        .then(recommendations => {
+            mediaGrid.innerHTML = ''; // Clear existing content
             
-            // Add filter functionality
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    filterRecommendations(btn.dataset.filter);
-                });
-            });
-        });
-
-        async function loadRecommendations() {
-            try {
-                const response = await fetch('/get_recommendations');
-                const recommendations = await response.json();
-                displayRecommendations(recommendations);
-            } catch (error) {
-                console.error('Error loading recommendations:', error);
-            }
-        }
-
-        function displayRecommendations(items) {
-            const container = document.getElementById('recommendationsList');
-            container.innerHTML = '';
-            
-            if (!items || items.length === 0) {
-                container.innerHTML = `
-                    <div class="col-12 text-center">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            No recommendations found. Try rating more items!
-                        </div>
-                    </div>
-                `;
+            if (recommendations.length === 0) {
+                emptyState.style.display = 'block';
                 return;
             }
-            
-            items.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'col-lg-3 col-md-4 col-sm-6 mb-4';
-                card.dataset.mediaType = item.media_type;
-                
-                const posterUrl = item.media_type === 'anime'
-                    ? (item.poster_path || 'https://via.placeholder.com/300x450?text=No+Image')
-                    : (item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Image');
-                
-                const title = item.title || item.name || 'Unknown Title';
-                const rating = typeof item.vote_average === 'number' ? item.vote_average.toFixed(1) : '0.0';
-                const releaseDate = item.release_date || item.first_air_date || 'N/A';
-                
-                let typeIcon;
-                switch(item.media_type) {
-                    case 'movie': typeIcon = 'fas fa-film'; break;
-                    case 'tv': typeIcon = 'fas fa-tv'; break;
-                    case 'anime': typeIcon = 'fas fa-play-circle'; break;
-                    default: typeIcon = 'fas fa-play';
-                }
-                
-                card.innerHTML = `
-                    <div class="media-card" style="cursor: pointer;">
-                        <div class="card-overlay">
-                            <div class="media-type">
-                                <i class="${typeIcon}"></i> ${item.media_type.toUpperCase()}
-                            </div>
-                            <div class="rating">
-                                <i class="fas fa-star"></i> ${rating}
-                            </div>
-                            <img src="${posterUrl}" 
-                                 class="media-poster" 
-                                 alt="${title}"
-                                 onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
-                            <div class="overlay-content">
-                                <h5 class="media-title">${title}</h5>
-                                <p class="release-date">${releaseDate}</p>
-                                <div class="hover-info">
-                                    <p class="overview">${item.overview || 'No overview available'}</p>
-                                    <button class="btn btn-primary btn-sm mt-2">
-                                        <i class="fas fa-info-circle me-2"></i>View Details
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                // Add click event listener to the card
-                const mediaCard = card.querySelector('.media-card');
-                mediaCard.addEventListener('click', () => {
-                    showMovieDetails(item, item.media_type);
-                });
-                
-                container.appendChild(card);
+
+            emptyState.style.display = 'none';
+            recommendations.forEach(media => {
+                const card = createMediaCard(media);
+                mediaGrid.appendChild(card);
             });
+        })
+        .catch(error => {
+            console.error('Error fetching recommendations:', error);
+            showToast('Error loading recommendations. Please try again later.', 'error');
+            emptyState.style.display = 'block';
+        });
+
+    // Function to create media card
+    function createMediaCard(media) {
+        const card = document.createElement('div');
+        card.className = 'media-card';
+        card.dataset.id = media.id;
+        card.dataset.type = media.media_type;
+
+        const userRating = media.user_rating;
+        const tmdbRating = media.vote_average / 2;
+        const stars = [];
+        for (let i = 0; i < 5; i++) {
+            stars.push(`<i class="fas fa-star star ${userRating && i < userRating ? 'active' : !userRating && i < Math.floor(tmdbRating) ? 'active' : ''}"></i>`);
         }
 
-        function filterRecommendations(filter) {
-            const cards = document.querySelectorAll('#recommendationsList .col-md-3');
-            cards.forEach(card => {
-                if (filter === 'all' || card.dataset.mediaType === filter) {
-                    card.style.display = '';
+        card.innerHTML = `
+            <div class="media-type-badge">
+                <i class="fas ${media.media_type === 'movie' ? 'fa-film' : media.media_type === 'tv' ? 'fa-tv' : 'fa-play-circle'}"></i>
+                ${media.media_type.toUpperCase()}
+            </div>
+            <img src="${media.media_type === 'anime' ? media.poster_path : `https://image.tmdb.org/t/p/w500${media.poster_path}`}" 
+                 alt="${media.title}" 
+                 class="media-poster"
+                 onerror="this.src='/static/images/no-poster.svg'">
+            <div class="media-info">
+                <h3 class="media-title">${media.title}</h3>
+                <div class="media-year">
+                    ${media.release_date ? media.release_date.substring(0, 4) : 'N/A'}
+                </div>
+                <div class="media-rating">
+                    <div class="rating-stars">
+                        ${stars.join('')}
+                    </div>
+                    <span class="rating-value">${userRating ? `${userRating}/5` : `${tmdbRating.toFixed(1)}/5`}</span>
+                </div>
+                ${userRating ? `
+                <div class="tmdb-rating">
+                    <span class="text-secondary">TMDB: ${tmdbRating.toFixed(1)}/5</span>
+                </div>
+                ` : ''}
+                <p class="media-overview">${media.overview}</p>
+            </div>
+        `;
+
+        return card;
+    }
+
+    // Media type filter
+    mediaTypeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            mediaTypeButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            const mediaType = this.dataset.type;
+            const mediaCards = document.querySelectorAll('.media-card');
+            
+            mediaCards.forEach(card => {
+                if (mediaType === 'all' || card.dataset.type === mediaType) {
+                    card.style.display = 'block';
                 } else {
                     card.style.display = 'none';
                 }
             });
-        }
+        });
+    });
 
-        async function showMovieDetails(item, mediaType) {
-            const modal = document.getElementById('movieModal');
-            
-            modal.querySelector('.modal-title').textContent = item.title || item.name;
-            
-            const posterUrl = mediaType === 'anime' 
-                ? item.poster_path 
-                : `https://image.tmdb.org/t/p/w500${item.poster_path}`;
-            modal.querySelector('.detail-poster').src = posterUrl || 'https://via.placeholder.com/300x450?text=No+Image';
-            
-            modal.querySelector('.overview').textContent = item.overview || 'No overview available';
-            modal.querySelector('.vote-average').textContent = `${item.vote_average.toFixed(1)}/10`;
-            
-            // Add rating functionality in modal
-            const modalRatingDiv = modal.querySelector('.modal-rating');
-            modalRatingDiv.innerHTML = generateStars();
-            modalRatingDiv.dataset.title = item.title || item.name;
-            modalRatingDiv.dataset.mediaType = mediaType;
-            modalRatingDiv.dataset.tmdbId = item.id;
-            modalRatingDiv.dataset.currentRating = "0";
-            modalRatingDiv.className = 'rating modal-rating';
-            addRatingEventListeners(modalRatingDiv);
+    // Media card click handler
+    mediaGrid.addEventListener('click', function(e) {
+        const mediaCard = e.target.closest('.media-card');
+        if (!mediaCard) return;
 
-            const response = await fetch('/get_details', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    media_type: mediaType,
-                    tmdb_id: item.id
-                })
-            });
-            
-            const details = await response.json();
-            
-            // Update genres with badges
-            const genresContainer = modal.querySelector('.genres');
-            genresContainer.innerHTML = details.genres.map(genre => 
-                `<span class="genre-badge">${genre.name}</span>`
-            ).join('');
+        const mediaId = mediaCard.dataset.id;
+        const mediaType = mediaCard.dataset.type;
 
-            // Update runtime/episodes
-            const runtimeText = mediaType === 'anime' 
-                ? `${details.episodes || '?'} episodes` 
-                : (details.runtime ? `${details.runtime} minutes` : 'N/A');
-            modal.querySelector('.runtime').textContent = runtimeText;
-
-            // Add release date
-            const releaseDate = details.release_date || details.first_air_date || details.aired || 'N/A';
-            modal.querySelector('.release-date').textContent = releaseDate;
-
-            // Add videos
-            const videosContainer = modal.querySelector('.videos-container');
-            videosContainer.innerHTML = '';
+        // Fetch media details
+        fetch('/get_details', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                media_type: mediaType,
+                tmdb_id: mediaId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Update modal content
+            const modal = document.getElementById('mediaDetailsModal');
+            modal.querySelector('.modal-title').textContent = data.title;
+            modal.querySelector('.modal-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
+            modal.querySelector('.modal-year').textContent = data.release_date ? new Date(data.release_date).getFullYear() : 'N/A';
+            modal.querySelector('.modal-overview').textContent = data.overview;
+            modal.querySelector('.tmdb-rating-value').textContent = `${(data.vote_average).toFixed(1)}/5`;
             
-            if (details.videos && details.videos.results && details.videos.results.length > 0) {
-                const trailers = details.videos.results.filter(video => 
-                    video.type === 'Trailer' && video.site === 'YouTube'
-                );
-                
-                if (trailers.length > 0) {
-                    trailers.slice(0, 2).forEach(video => {
-                        const videoDiv = document.createElement('div');
-                        videoDiv.className = 'video-container mb-3';
-                        videoDiv.innerHTML = `
-                            <iframe
-                                width="100%"
-                                height="315"
-                                src="https://www.youtube.com/embed/${video.key}"
-                                frameborder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowfullscreen>
-                            </iframe>
-                        `;
-                        videosContainer.appendChild(videoDiv);
-                    });
-                } else {
-                    videosContainer.innerHTML = '<p class="text-secondary">No trailers available</p>';
-                }
-            } else {
-                videosContainer.innerHTML = '<p class="text-secondary">No videos available</p>';
+            // Update genres
+            const genres = data.genres.map(genre => genre.name).join(', ');
+            modal.querySelector('.genres').textContent = `Genres: ${genres}`;
+            
+            // Update runtime
+            if (data.runtime) {
+                const hours = Math.floor(data.runtime / 60);
+                const minutes = data.runtime % 60;
+                modal.querySelector('.runtime').textContent = `Runtime: ${hours}h ${minutes}m`;
             }
+            
+            // Update release date
+            modal.querySelector('.release-date').textContent = `Release Date: ${data.release_date || 'N/A'}`;
 
-            // Add additional anime-specific information if available
-            if (mediaType === 'anime' && details.studios) {
-                const studioText = details.studios.join(', ');
-                const studioElement = document.createElement('p');
-                studioElement.className = 'meta-info';
-                studioElement.innerHTML = `<i class="fas fa-film me-2"></i>Studios: ${studioText}`;
-                modal.querySelector('.meta-info').appendChild(studioElement);
-            }
-
-            movieModal.show();
-        }
-
-        function generateStars() {
-            let starsHtml = '';
-            for (let i = 1; i <= 5; i++) {
-                starsHtml += `<i class="star fas fa-star" data-rating="${i}" style="margin-right: 5px; color: var(--text-secondary);"></i>`;
-            }
-            return starsHtml;
-        }
-
-        function updateStars(ratingDiv, rating) {
-            if (!ratingDiv) return;
-            const stars = ratingDiv.querySelectorAll('.star');
+            // Initialize rating stars and show user's rating if it exists
+            const stars = modal.querySelectorAll('.rating-stars .star');
             stars.forEach((star, index) => {
-                if (index < rating) {
-                    star.style.color = 'var(--accent-color)';
-                } else {
-                    star.style.color = 'var(--text-secondary)';
+                // Clear previous state
+                star.classList.remove('active');
+                // Set click handler
+                star.onclick = () => rateMedia(mediaId, mediaType, index + 1);
+                // If user has rated this media, show their rating
+                if (data.user_rating && index < data.user_rating) {
+                    star.classList.add('active');
                 }
             });
-        }
 
-        function addRatingEventListeners(ratingDiv) {
-            if (!ratingDiv) return;
-            
-            const stars = ratingDiv.querySelectorAll('.star');
-            const title = ratingDiv.dataset.title;
-            const mediaType = ratingDiv.dataset.mediaType;
-            const tmdbId = parseInt(ratingDiv.dataset.tmdbId);
-
-            // Remove existing event listeners
-            stars.forEach(star => {
-                star.replaceWith(star.cloneNode(true));
-            });
-
-            // Get fresh references after cloning
-            const freshStars = ratingDiv.querySelectorAll('.star');
-
-            // Add hover effect
-            freshStars.forEach((star, index) => {
-                star.addEventListener('mouseenter', () => {
-                    freshStars.forEach((s, i) => {
-                        if (i <= index) {
-                            s.style.color = 'var(--accent-color)';
-                        } else {
-                            s.style.color = 'var(--text-secondary)';
-                        }
-                    });
-                });
-
-                star.addEventListener('mouseleave', () => {
-                    const currentRating = parseInt(ratingDiv.dataset.currentRating) || 0;
-                    updateStars(ratingDiv, currentRating);
-                });
-
-                star.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const rating = index + 1;
-                    ratingDiv.dataset.currentRating = rating;
-                    addPreference(title, mediaType, rating, tmdbId);
-                });
-            });
-
-            // Reset stars when mouse leaves the rating div
-            ratingDiv.addEventListener('mouseleave', () => {
-                const currentRating = parseInt(ratingDiv.dataset.currentRating) || 0;
-                updateStars(ratingDiv, currentRating);
-            });
-
-            // Initialize stars to current rating
-            const currentRating = parseInt(ratingDiv.dataset.currentRating) || 0;
-            updateStars(ratingDiv, currentRating);
-        }
-
-        async function addPreference(title, mediaType, rating, tmdbId) {
-            try {
-                const response = await fetch('/add_preference', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        title, 
-                        media_type: mediaType, 
-                        rating,
-                        tmdb_id: tmdbId
-                    })
-                });
-
-                if (response.ok) {
-                    // Update all instances of this movie's rating
-                    document.querySelectorAll(`.rating[data-title="${title}"]`).forEach(ratingDiv => {
-                        ratingDiv.dataset.currentRating = rating;
-                        updateStars(ratingDiv, rating);
-                    });
-                    // Refresh recommendations
-                    loadRecommendations();
-                }
-            } catch (error) {
-                console.error('Error saving rating:', error);
+            // Update rating text
+            if (data.user_rating) {
+                modal.querySelector('.user-rating-text').textContent = `Your Rating: ${data.user_rating}/5`;
+            } else {
+                modal.querySelector('.user-rating-text').textContent = 'Your Rating: Not rated yet';
             }
-        }
-    </script>
-</body>
-</html> 
+
+            // Handle trailer
+            const trailerBtn = modal.querySelector('.btn-trailer');
+            const trailerContainer = modal.querySelector('.trailer-container');
+            const trailerFrame = modal.querySelector('.trailer-frame');
+
+            // Find trailer video
+            const trailer = data.videos?.results?.find(video => 
+                video.type === 'Trailer' && video.site === 'YouTube'
+            );
+
+            if (trailer) {
+                trailerBtn.style.display = 'block';
+                trailerBtn.onclick = () => {
+                    trailerContainer.style.display = 'block';
+                    trailerFrame.src = `https://www.youtube.com/embed/${trailer.key}`;
+                };
+            } else {
+                trailerBtn.style.display = 'none';
+                trailerContainer.style.display = 'none';
+            }
+
+            // Clean up trailer when modal is closed
+            modal.addEventListener('hidden.bs.modal', function () {
+                trailerFrame.src = '';
+                trailerContainer.style.display = 'none';
+            });
+
+            // Show modal
+            new bootstrap.Modal(modal).show();
+        })
+        .catch(error => console.error('Error:', error));
+    });
+
+    // Function to handle rating
+    function rateMedia(mediaId, mediaType, rating) {
+        fetch('/add_preference', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                media_type: mediaType,
+                tmdb_id: mediaId,
+                rating: rating,
+                title: document.querySelector('#mediaDetailsModal .modal-title').textContent
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                // Update UI to show the rating
+                const modal = document.getElementById('mediaDetailsModal');
+                const stars = modal.querySelectorAll('.rating-stars .star');
+                stars.forEach((star, index) => {
+                    star.classList.toggle('active', index < rating);
+                });
+                modal.querySelector('.user-rating-text').textContent = `Your Rating: ${rating}/5`;
+                
+                // Show success message
+                showToast('Rating saved successfully!', 'success');
+
+                // Refresh recommendations after rating
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error saving rating. Please try again.', 'error');
+        });
+    }
+
+    // Function to show toast notifications
+    function showToast(message, type = 'info') {
+        const toastContainer = document.querySelector('.toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type} show`;
+        toast.innerHTML = `
+            <div class="toast-body">
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
+                ${message}
+            </div>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+});
+</script>
+{% endblock %} 

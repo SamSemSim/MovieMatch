@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .auth-container {
+        max-width: 400px;
+        margin: 4rem auto;
+        padding: 2rem;
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .auth-title {
+        text-align: center;
+        margin-bottom: 2rem;
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(45deg, var(--accent-color), #ff4b2b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    .form-control {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2);
+    }
+
+    .btn-register {
+        width: 100%;
+        padding: 0.75rem;
+        background: var(--accent-color);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn-register:hover {
+        background: var(--accent-hover);
+        transform: translateY(-2px);
+    }
+
+    .login-link {
+        text-align: center;
+        margin-top: 1.5rem;
+        color: var(--text-secondary);
+    }
+
+    .login-link a {
+        color: var(--accent-color);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s ease;
+    }
+
+    .login-link a:hover {
+        color: var(--accent-hover);
+    }
+
+    .flash-messages {
+        margin-bottom: 1.5rem;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .alert-danger {
+        background: rgba(231, 76, 60, 0.1);
+        border: 1px solid rgba(231, 76, 60, 0.2);
+        color: #e74c3c;
+    }
+
+    .alert-success {
+        background: rgba(46, 204, 113, 0.1);
+        border: 1px solid rgba(46, 204, 113, 0.2);
+        color: #2ecc71;
+    }
+
+    .password-requirements {
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .password-requirements ul {
+        list-style: none;
+        padding-left: 0;
+        margin-bottom: 0;
+    }
+
+    .password-requirements li {
+        margin-bottom: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .password-requirements li i {
+        font-size: 0.8rem;
+    }
+
+    .requirement-met {
+        color: #2ecc71;
+    }
+
+    .requirement-not-met {
+        color: var(--text-secondary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h1 class="auth-title">Create Account</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas {% if category == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <form method="POST" action="{{ url_for('register') }}" id="registerForm">
+        <div class="form-group">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" class="form-control" id="username" name="username" required>
+        </div>
+        <div class="form-group">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+            <div class="password-requirements">
+                <ul>
+                    <li id="length"><i class="fas fa-circle"></i> At least 8 characters</li>
+                    <li id="uppercase"><i class="fas fa-circle"></i> At least one uppercase letter</li>
+                    <li id="lowercase"><i class="fas fa-circle"></i> At least one lowercase letter</li>
+                    <li id="number"><i class="fas fa-circle"></i> At least one number</li>
+                    <li id="special"><i class="fas fa-circle"></i> At least one special character</li>
+                </ul>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="confirm_password" class="form-label">Confirm Password</label>
+            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+        </div>
+        <button type="submit" class="btn btn-register">Create Account</button>
+    </form>
+    
+    <div class="login-link">
+        Already have an account? <a href="{{ url_for('login') }}">Login here</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirm_password');
+        const form = document.getElementById('registerForm');
+        
+        // Password validation requirements
+        const requirements = {
+            length: { regex: /.{8,}/, element: document.getElementById('length') },
+            uppercase: { regex: /[A-Z]/, element: document.getElementById('uppercase') },
+            lowercase: { regex: /[a-z]/, element: document.getElementById('lowercase') },
+            number: { regex: /[0-9]/, element: document.getElementById('number') },
+            special: { regex: /[!@#$%^&*(),.?":{}|<>]/, element: document.getElementById('special') }
+        };
+        
+        // Check password requirements
+        function checkPassword(e) {
+            const value = e.target.value;
+            
+            for (let requirement in requirements) {
+                const met = requirements[requirement].regex.test(value);
+                const element = requirements[requirement].element;
+                
+                element.querySelector('i').className = met ? 
+                    'fas fa-check-circle requirement-met' : 
+                    'fas fa-circle requirement-not-met';
+            }
+        }
+        
+        // Check if passwords match
+        function checkPasswordsMatch() {
+            if (confirmPassword.value && password.value !== confirmPassword.value) {
+                confirmPassword.setCustomValidity("Passwords don't match");
+            } else {
+                confirmPassword.setCustomValidity('');
+            }
+        }
+        
+        password.addEventListener('input', checkPassword);
+        password.addEventListener('input', checkPasswordsMatch);
+        confirmPassword.addEventListener('input', checkPasswordsMatch);
+        
+        // Form submission
+        form.addEventListener('submit', function(e) {
+            if (!form.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            checkPasswordsMatch();
+        });
+    });
+</script>
+{% endblock %} 

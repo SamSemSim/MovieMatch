@@ -138,10 +138,23 @@ def get_recommendations_for_item(media_type, tmdb_id):
         
         if response.status_code == 200:
             results = response.json().get('results', [])
-            # Add media_type to each result
+            # Add media_type and format each result
+            formatted_results = []
             for result in results:
-                result['media_type'] = media_type
-            return results
+                if result:
+                    # Format the result
+                    formatted_result = {
+                        'id': result.get('id'),
+                        'title': result.get('title') or result.get('name', 'Unknown Title'),
+                        'overview': result.get('overview', 'No overview available'),
+                        'poster_path': result.get('poster_path', ''),
+                        'vote_average': float(result.get('vote_average', 0)),
+                        'media_type': media_type,
+                        'release_date': result.get('release_date') or result.get('first_air_date', 'N/A'),
+                        'genres': result.get('genres', [])
+                    }
+                    formatted_results.append(formatted_result)
+            return formatted_results
             
         print(f"Error getting recommendations: {response.status_code}")
         return []
