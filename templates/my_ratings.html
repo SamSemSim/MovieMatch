@@ -316,84 +316,60 @@
 
     <div class="container">
         <div class="ratings-container">
-            <h2 class="section-title">My Ratings</h2>
+            <h1 class="section-title">My Ratings</h1>
             
+            <!-- Filter Section -->
             <div class="filter-section">
-                <button class="btn filter-btn active" data-filter="all">
-                    <i class="fas fa-th-list me-2"></i>All
+                <button class="filter-btn active" data-type="all">All</button>
+                {% for media_type in media_types %}
+                <button class="filter-btn" data-type="{{ media_type }}">
+                    {{ media_type|title }}
                 </button>
-                <button class="btn filter-btn" data-filter="movie">
-                    <i class="fas fa-film me-2"></i>Movies
-                </button>
-                <button class="btn filter-btn" data-filter="tv">
-                    <i class="fas fa-tv me-2"></i>TV Shows
-                </button>
-                <button class="btn filter-btn" data-rating="5">
-                    <i class="fas fa-star me-2"></i>5 Stars
-                </button>
-                <button class="btn filter-btn" data-rating="4">
-                    <i class="fas fa-star-half-alt me-2"></i>4+ Stars
-                </button>
+                {% endfor %}
             </div>
 
-            <div id="ratings-list">
-                {% if ratings %}
-                    {% for rating in ratings %}
-                    <div class="rating-card" data-media-type="{{ rating.media_type }}" data-rating="{{ rating.rating }}" onclick="showMovieDetails({
-                        id: {{ rating.tmdb_id or rating.mal_id }},
-                        title: '{{ rating.title | replace("'", "\\'") }}',
-                        overview: '{{ rating.overview | replace("'", "\\'") if rating.overview else "No overview available" }}',
-                        vote_average: {{ rating.vote_average or 0 }},
-                        poster_path: '{{ rating.image_url if rating.media_type == "anime" else rating.poster_path }}',
-                        media_type: '{{ rating.media_type }}'
-                    })">
-                        {% if rating.media_type == 'anime' %}
-                            <img src="{{ rating.image_url or 'https://via.placeholder.com/300x450?text=No+Image' }}" 
-                                 class="rating-poster" 
-                                 alt="{{ rating.title }}" 
-                                 onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
-                        {% else %}
-                            <img src="{{ 'https://image.tmdb.org/t/p/w500' + rating.poster_path if rating.poster_path else 'https://via.placeholder.com/300x450?text=No+Image' }}" 
-                                 class="rating-poster" 
-                                 alt="{{ rating.title }}" 
-                                 onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
-                        {% endif %}
-                        <div class="rating-info">
-                            <div class="rating-title">
-                                {{ rating.title }}
-                                <span class="rating-type-badge">
-                                    <i class="fas {{ 'fa-play-circle' if rating.media_type == 'anime' else 'fa-film' if rating.media_type == 'movie' else 'fa-tv' }}"></i>
-                                    {{ rating.media_type | upper }}
-                                </span>
-                            </div>
-                            <div class="rating-meta">
-                                <i class="fas fa-star" style="color: var(--rating-color);"></i>
-                                {{ rating.vote_average|round(1) if rating.vote_average else 'N/A' }}/10
-                            </div>
-                            <div class="rating-stars">
-                                {% for i in range(rating.rating|int) %}
-                                <i class="fas fa-star" style="color: var(--rating-color);"></i>
-                                {% endfor %}
-                                {% for i in range(5 - (rating.rating|int)) %}
-                                <i class="far fa-star" style="color: var(--rating-color);"></i>
-                                {% endfor %}
-                            </div>
+            <!-- Ratings List -->
+            {% if ratings %}
+            <div class="ratings-list">
+                {% for rating in ratings %}
+                <div class="rating-card" data-media-type="{{ rating.media_type }}" data-rating-id="{{ rating.id }}">
+                    {% if rating.media_type == 'anime' %}
+                        <img src="{{ rating.image_url }}" alt="{{ rating.title }}" class="rating-poster">
+                    {% else %}
+                        <img src="https://image.tmdb.org/t/p/w500{{ rating.poster_path }}" alt="{{ rating.title }}" class="rating-poster">
+                    {% endif %}
+                    <div class="rating-info">
+                        <h3 class="rating-title">
+                            {{ rating.title }}
+                            <span class="rating-type-badge">{{ rating.media_type|title }}</span>
+                        </h3>
+                        <div class="rating-meta">
+                            {% if rating.created_at %}
+                                Rated on {{ rating.created_at|datetime }}
+                            {% else %}
+                                Recently rated
+                            {% endif %}
                         </div>
-                        <div class="delete-rating" onclick="event.stopPropagation(); deleteRating({{ rating.id }})">
-                            <i class="fas fa-trash-alt"></i>
+                        <div class="rating-stars">
+                            {% for i in range(rating.rating) %}
+                            <i class="fas fa-star"></i>
+                            {% endfor %}
+                            {% for i in range(5 - rating.rating) %}
+                            <i class="far fa-star"></i>
+                            {% endfor %}
                         </div>
                     </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="no-ratings">
-                        <i class="fas fa-film"></i>
-                        <p>You haven't rated any movies, TV shows, or anime yet.</p>
-                        <a href="/" class="btn btn-primary">
-                            <i class="fas fa-search me-2"></i>Start Rating
-                        </a>
-                    </div>
-                {% endif %}
+                    <i class="fas fa-trash delete-rating" onclick="deleteRating({{ rating.id }})"></i>
+                </div>
+                {% endfor %}
             </div>
+            {% else %}
+            <div class="no-ratings">
+                <i class="fas fa-film"></i>
+                <p>You haven't rated any content yet.</p>
+                <a href="/" class="btn btn-primary">Start Rating</a>
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -539,6 +515,54 @@
             } catch (error) {
                 console.error('Error deleting rating:', error);
                 alert('Failed to delete rating');
+            }
+        }
+
+        // Filter functionality
+        document.querySelectorAll('.filter-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                // Update active button
+                document.querySelector('.filter-btn.active').classList.remove('active');
+                button.classList.add('active');
+                
+                const filterType = button.dataset.type;
+                
+                // Filter cards
+                document.querySelectorAll('.rating-card').forEach(card => {
+                    if (filterType === 'all' || card.dataset.mediaType === filterType) {
+                        card.style.display = 'flex';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // Delete rating functionality
+        function deleteRating(ratingId) {
+            if (confirm('Are you sure you want to delete this rating?')) {
+                fetch(`/delete_rating/${ratingId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Remove the card from the UI
+                        const card = document.querySelector(`.rating-card[data-rating-id="${ratingId}"]`);
+                        card.remove();
+                        
+                        // Check if there are any ratings left
+                        const remainingCards = document.querySelectorAll('.rating-card');
+                        if (remainingCards.length === 0) {
+                            location.reload(); // Reload to show the "no ratings" message
+                        }
+                    } else {
+                        alert('Failed to delete rating');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to delete rating');
+                });
             }
         }
     </script>

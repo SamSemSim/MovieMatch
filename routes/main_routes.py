@@ -178,61 +178,86 @@ def get_recommendations_route():
 
 @app.route('/get_details', methods=['POST'])
 def get_details():
-    data = request.json
-    media_type = data.get('media_type')
-    tmdb_id = data.get('tmdb_id')
-
-    if not media_type or not tmdb_id:
-        return jsonify({'error': 'Missing media_type or tmdb_id'}), 400
-
     try:
-        if media_type == 'anime':
-            # Get anime details from Jikan API
-            response = requests.get(f'https://api.jikan.moe/v4/anime/{tmdb_id}')
-            if response.status_code == 200:
-                details = response.json()
-                anime_data = details.get('data', {})
+        data = request.json
+        media_type = data.get('media_type')
+        tmdb_id = data.get('tmdb_id')
+
+        if not media_type or not tmdb_id:
+            return jsonify({'error': 'Missing media_type or tmdb_id'}), 400
+
+        try:
+            if media_type == 'anime':
+                # Get anime details from Jikan API
+                response = requests.get(f'https://api.jikan.moe/v4/anime/{tmdb_id}')
+                if response.status_code == 200:
+                    details = response.json()
+                    anime_data = details.get('data', {})
+                    return jsonify({
+                        'genres': [{'name': genre.get('name', '')} for genre in anime_data.get('genres', []) if genre.get('name')],
+                        'episodes': anime_data.get('episodes', 'Unknown'),
+                        'aired': anime_data.get('aired', {}).get('string', 'Unknown air date'),
+                        'studios': [studio.get('name', '') for studio in anime_data.get('studios', []) if studio.get('name')],
+                        'poster_path': anime_data.get('images', {}).get('jpg', {}).get('large_image_url', ''),
+                        'videos': {'results': []},  # Anime doesn't have trailer data in the same format
+                        'overview': anime_data.get('synopsis', 'No overview available'),
+                        'title': anime_data.get('title', 'Unknown Title'),
+                        'vote_average': float(anime_data.get('score', 0)) / 2 if anime_data.get('score') else 0,  # Convert 10-point scale to 5-point
+                        'release_date': anime_data.get('aired', {}).get('string', 'Unknown release date')
+                    })
+            else:
+                # Get movie/TV show details from TMDB
+                endpoint = 'movie' if media_type == 'movie' else 'tv'
+                response = requests.get(
+                    f'{TMDB_BASE_URL}/{endpoint}/{tmdb_id}',
+                    params={
+                        'api_key': TMDB_API_KEY,
+                        'language': 'en-US',
+                        'append_to_response': 'videos,keywords'
+                    }
+                )
+                
+                if response.status_code == 200:
+                    details = response.json()
+                    
+                    # Handle runtime for TV shows (use first episode runtime if available)
+                    if media_type == 'tv':
+                        runtime = details.get('episode_run_time', [])
+                        runtime = runtime[0] if runtime else None
+                    else:
+                        runtime = details.get('runtime')
+
+                    return jsonify({
+                        'genres': details.get('genres', []),
+                        'runtime': runtime,
+                        'release_date': details.get('release_date') or details.get('first_air_date', 'Unknown release date'),
+                        'poster_path': details.get('poster_path', ''),
+                        'videos': details.get('videos', {'results': []}),
+                        'overview': details.get('overview', 'No overview available'),
+                        'title': details.get('title') or details.get('name', 'Unknown Title'),
+                        'vote_average': float(details.get('vote_average', 0)),
+                        'keywords': details.get('keywords', {}).get('keywords', [])
+                    })
+                
+                print(f"TMDB API error: {response.status_code}")
                 return jsonify({
-                    'genres': [{'name': genre['name']} for genre in anime_data.get('genres', [])],
-                    'episodes': anime_data.get('episodes'),
-                    'aired': anime_data.get('aired', {}).get('string'),
-                    'studios': [studio['name'] for studio in anime_data.get('studios', [])],
-                    'poster_path': anime_data.get('images', {}).get('jpg', {}).get('large_image_url'),
-                    'videos': {'results': []},  # Anime doesn't have trailer data in the same format
-                    'overview': anime_data.get('synopsis', 'No overview available'),
-                    'title': anime_data.get('title', 'Unknown Title'),
-                    'vote_average': anime_data.get('score', 0) / 2  # Convert 10-point scale to 5-point
-                })
-        else:
-            # Get movie/TV show details from TMDB
-            endpoint = 'movie' if media_type == 'movie' else 'tv'
-            response = requests.get(
-                f'{TMDB_BASE_URL}/{endpoint}/{tmdb_id}',
-                params={
-                    'api_key': TMDB_API_KEY,
-                    'language': 'en-US',
-                    'append_to_response': 'videos,keywords'
-                }
-            )
-            
-            if response.status_code == 200:
-                details = response.json()
-                return jsonify({
-                    'genres': details.get('genres', []),
-                    'runtime': details.get('runtime') or details.get('episode_run_time', [None])[0],
-                    'release_date': details.get('release_date') or details.get('first_air_date'),
-                    'poster_path': details.get('poster_path'),
-                    'videos': details.get('videos', {'results': []}),
-                    'overview': details.get('overview', 'No overview available'),
-                    'title': details.get('title') or details.get('name', 'Unknown Title'),
-                    'vote_average': float(details.get('vote_average', 0)),
-                    'keywords': details.get('keywords', {'keywords': []}).get('keywords', [])
-                })
-            
-            print(f"TMDB API error: {response.status_code}")
+                    'error': f'Failed to fetch details from TMDB API: {response.status_code}'
+                }), response.status_code
+
+        except (IndexError, KeyError, ValueError, TypeError) as e:
+            print(f"Error processing details: {str(e)}")
+            # Return a valid response with default values instead of failing
             return jsonify({
-                'error': f'Failed to fetch details from TMDB API: {response.status_code}'
-            }), response.status_code
+                'genres': [],
+                'runtime': None,
+                'release_date': 'Unknown release date',
+                'poster_path': '',
+                'videos': {'results': []},
+                'overview': 'No overview available',
+                'title': 'Unknown Title',
+                'vote_average': 0,
+                'keywords': []
+            })
 
     except Exception as e:
         print(f"Error fetching details: {str(e)}")
@@ -240,27 +265,29 @@ def get_details():
             'error': f'Failed to fetch details: {str(e)}'
         }), 500
 
-    # Return default values if all else fails
-    return jsonify({
-        'genres': [],
-        'runtime': None,
-        'release_date': None,
-        'poster_path': None,
-        'videos': {'results': []},
-        'overview': 'No overview available',
-        'title': 'Unknown Title',
-        'vote_average': 0,
-        'keywords': []
-    })
-
 @app.route('/my_ratings')
 def my_ratings():
-    # Get all user preferences ordered by rating and created_at
-    preferences = UserPreference.query.order_by(
-        UserPreference.rating.desc(),
-        UserPreference.created_at.desc()
-    ).all()
-    return render_template('my_ratings.html', ratings=preferences)
+    try:
+        # Get all user preferences ordered by rating and created_at
+        ratings = UserPreference.query.order_by(
+            UserPreference.rating.desc(),
+            UserPreference.created_at.desc()
+        ).all()
+        
+        # Convert ratings to dictionary format
+        ratings_list = [rating.to_dict() for rating in ratings]
+        
+        # Group ratings by media type for filtering
+        media_types = set(rating.media_type for rating in ratings)
+        
+        return render_template(
+            'my_ratings.html',
+            ratings=ratings_list,
+            media_types=media_types
+        )
+    except Exception as e:
+        print(f"Error fetching ratings: {str(e)}")
+        return render_template('my_ratings.html', ratings=[], media_types=set())
 
 @app.route('/delete_rating/<int:rating_id>', methods=['DELETE'])
 def delete_rating(rating_id):
