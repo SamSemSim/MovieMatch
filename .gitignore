@@ -1,10 +1,13 @@
+# Firebase
+firebase-credentials.json
+*firebase-adminsdk*.json
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -24,6 +27,8 @@ wheels/
 # Virtual Environment
 venv/
 ENV/
+env/
+.env
 
 # IDE
 .idea/
@@ -31,29 +36,18 @@ ENV/
 *.swp
 *.swo
 
-# Flask
-instance/
-.webassets-cache
-
-# SQLite database
+# Database
 *.db
-
-# Environment variables
-.env
-.env.local
+instance/
 
 # Logs
-*.log
 logs/
+*.log
 
 # Cache
 cache/
+.cache/
 
-# OS generated files
+# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db 

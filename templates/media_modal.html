@@ -216,10 +216,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Update basic info
             modal.querySelector('.modal-title').textContent = data.title;
-            modal.querySelector('.modal-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
+            modal.querySelector('.modal-poster').src = data.poster_path ? 
+                `https://image.tmdb.org/t/p/w500${data.poster_path}` : '/static/images/no-poster.svg';
             modal.querySelector('.modal-year').textContent = data.release_date ? new Date(data.release_date).getFullYear() : 'N/A';
             modal.querySelector('.modal-overview').textContent = data.overview;
-            modal.querySelector('.tmdb-rating-value').textContent = `${data.vote_average.toFixed(1)}/5`;
+            modal.querySelector('.tmdb-rating-value').textContent = `${data.vote_average.toFixed(1)}/10`;
             
             // Update genres
             const genres = data.genres.map(genre => genre.name).join(', ');
@@ -230,26 +231,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 const hours = Math.floor(data.runtime / 60);
                 const minutes = data.runtime % 60;
                 modal.querySelector('.runtime').textContent = `Runtime: ${hours}h ${minutes}m`;
+            } else {
+                modal.querySelector('.runtime').textContent = '';
             }
             
             // Update release date
             modal.querySelector('.release-date').textContent = `Release Date: ${data.release_date || 'N/A'}`;
 
-            // Handle trailer button
+            // Handle trailer button and container
             const trailerBtn = modal.querySelector('.btn-trailer');
             const trailerContainer = modal.querySelector('.trailer-container');
             const trailerFrame = modal.querySelector('.trailer-frame');
             
+            // Reset trailer state
+            trailerBtn.style.display = 'none';
+            trailerContainer.style.display = 'none';
+            trailerFrame.src = '';
+            
+            // Check for trailer videos
             if (data.videos && data.videos.results && data.videos.results.length > 0) {
-                const trailer = data.videos.results.find(video => video.type === 'Trailer') || data.videos.results[0];
-                trailerBtn.style.display = 'block';
-                trailerBtn.onclick = () => {
-                    trailerContainer.style.display = 'block';
-                    trailerFrame.src = `https://www.youtube.com/embed/${trailer.key}`;
-                };
-            } else {
-                trailerBtn.style.display = 'none';
-                trailerContainer.style.display = 'none';
+                const trailer = data.videos.results[0]; // Get the first trailer
+                if (trailer && trailer.key) {
+                    trailerBtn.style.display = 'block';
+                    trailerBtn.onclick = () => {
+                        trailerContainer.style.display = 'block';
+                        trailerFrame.src = `https://www.youtube.com/embed/${trailer.key}?autoplay=1`;
+                    };
+                }
             }
 
             // Initialize rating stars
@@ -267,7 +275,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 `Your Rating: ${data.user_rating}/5` : 'Your Rating: Not rated yet';
 
             // Show modal
-            new bootstrap.Modal(modal).show();
+            const modalInstance = new bootstrap.Modal(modal);
+            modalInstance.show();
         })
         .catch(error => {
             console.error('Error:', error);
@@ -276,12 +285,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Clean up when modal is hidden
-    document.getElementById('mediaDetailsModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('mediaDetailsModal').addEventListener('hidden.bs.modal', function () {
         const trailerFrame = this.querySelector('.trailer-frame');
+        const trailerContainer = this.querySelector('.trailer-container');
         if (trailerFrame) {
             trailerFrame.src = '';
         }
-        this.querySelector('.trailer-container').style.display = 'none';
+        if (trailerContainer) {
+            trailerContainer.style.display = 'none';
+        }
     });
 
     // Function to handle rating

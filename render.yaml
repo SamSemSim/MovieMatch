@@ -4,13 +4,7 @@ services:
     env: python
     buildCommand: |
       pip install -r requirements.txt
-      mkdir -p instance
-      chmod 777 instance
       export FLASK_APP=app.py
-      flask db init
-      flask db migrate -m "Initial migration"
-      flask db upgrade
-      python -c "from app import app, db; from models.user import User; from models.user_preference import UserPreference; app.app_context().push(); db.create_all()"
     startCommand: gunicorn -c gunicorn_config.py app:app
     envVars:
       - key: PYTHON_VERSION
@@ -21,12 +15,8 @@ services:
         generateValue: true
       - key: TMDB_API_KEY
         sync: false
-      - key: DATABASE_URL
-        value: sqlite:///instance/moviematch.db
-    disk:
-      name: sqlite-data
-      mountPath: /opt/render/project/src/instance
-      sizeGB: 1
+      - key: FIREBASE_CREDENTIALS
+        sync: false
 
 databases:
   - name: moviematch-db

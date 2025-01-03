@@ -1,5 +1,5 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify, current_app
-from app import app, db
+from app import app
 from models.user import User
 from flask_login import login_user, logout_user, login_required, current_user
 import os
@@ -47,7 +47,7 @@ def login():
         
         app.logger.info(f"Login attempt for username: {username}")
         
-        user = User.query.filter_by(username=username).first()
+        user = User.get_by_username(username)
         
         if user and user.check_password(password):
             login_user(user)
@@ -86,26 +86,15 @@ def register():
             flash('Passwords do not match', 'error')
             return redirect(url_for('register'))
         
-        if User.query.filter_by(username=username).first():
+        if User.get_by_username(username):
             app.logger.warning(f"Registration failed: Username {username} already exists")
             if request.is_json:
                 return jsonify({'success': False, 'error': 'Username already exists'}), 400
             flash('Username already exists', 'error')
             return redirect(url_for('register'))
-            
-        if User.query.filter_by(email=email).first():
-            app.logger.warning(f"Registration failed: Email {email} already registered")
-            if request.is_json:
-                return jsonify({'success': False, 'error': 'Email already registered'}), 400
-            flash('Email already registered', 'error')
-            return redirect(url_for('register'))
         
         try:
-            user = User(username=username, email=email)
-            user.set_password(password)
-            
-            db.session.add(user)
-            db.session.commit()
+            user = User.create(username=username, email=email, password=password)
             
             login_user(user)
             app.logger.info(f"Registration successful for user: {username}")
@@ -115,7 +104,6 @@ def register():
             return redirect(url_for('home'))
         except Exception as e:
             app.logger.error(f"Registration error: {str(e)}")
-            db.session.rollback()
             if request.is_json:
                 return jsonify({'success': False, 'error': 'Registration failed'}), 500
             flash('Registration failed', 'error')
@@ -132,42 +120,34 @@ def logout():
 @app.route('/profile')
 @login_required
 def profile():
-    # Get all ratings
-    ratings = current_user.ratings.all()
+    # Get user's preferences
+    from models.user_preference import UserPreference
+    preferences = UserPreference.get_user_preferences(current_user.username)
     
     # Calculate average rating
-    avg_rating = sum(float(r.rating) for r in ratings) / len(ratings) if ratings else 0
+    ratings = [pref.rating for pref in preferences]
+    avg_rating = sum(ratings) / len(ratings) if ratings else 0
     
     # Get recent activity (last 10 ratings)
-    recent_activity = ratings[:10] if ratings else []
-    
-    # Get favorite genres
-    genre_counts = {}
-    for rating in ratings:
-        if rating.genres:
-            for genre in rating.genres.split(','):
-                genre = genre.strip()
-                if genre:  # Only count non-empty genres
-                    genre_counts[genre] = genre_counts.get(genre, 0) + 1
-    
-    favorite_genres = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+    recent_activity = sorted(preferences, key=lambda x: x.created_at, reverse=True)[:10]
     
     return render_template('auth/profile.html', 
                          user=current_user,
                          avg_rating=avg_rating,
-                         recent_activity=recent_activity,
-                         favorite_genres=favorite_genres) 
+                         recent_activity=recent_activity)
 
 @app.route('/update_profile', methods=['POST'])
 @login_required
 def update_profile():
     if request.method == 'POST':
-        current_user.bio = request.form.get('bio', '')
-        current_user.location = request.form.get('location', '')
-        current_user.favorite_movie = request.form.get('favorite_movie', '')
-        current_user.favorite_tv_show = request.form.get('favorite_tv_show', '')
+        update_data = {
+            'bio': request.form.get('bio', ''),
+            'location': request.form.get('location', ''),
+            'favorite_movie': request.form.get('favorite_movie', ''),
+            'favorite_tv_show': request.form.get('favorite_tv_show', '')
+        }
         
-        db.session.commit()
+        current_user.update_profile(update_data)
         return jsonify({'success': True})
     
     return jsonify({'success': False})
@@ -194,8 +174,8 @@ def update_profile_picture():
             if os.path.exists(old_picture_path):
                 os.remove(old_picture_path)
         
-        current_user.profile_picture = picture_filename
-        db.session.commit()
+        # Update profile picture in Firebase
+        current_user.update_profile({'profile_picture': picture_filename})
         
         return jsonify({'success': True})
     except Exception as e:

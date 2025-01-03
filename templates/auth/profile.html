@@ -43,6 +43,7 @@
         position: relative;
         z-index: 1;
         background: var(--card-bg);
+        object-fit: cover;
     }
 
     .profile-name {
@@ -399,94 +400,19 @@
 {% block content %}
 <div class="profile-container">
     <div class="profile-header">
-        <div class="profile-picture-container">
-            <img src="{{ user.get_profile_picture_url() }}" alt="Profile Avatar" class="profile-avatar">
-            <button class="btn-edit-picture" data-bs-toggle="modal" data-bs-target="#editPictureModal">
-                <i class="fas fa-camera"></i>
-            </button>
-        </div>
+        <img src="{{ user.profile_picture_url }}" alt="Profile Avatar" class="profile-avatar">
         <h1 class="profile-name">{{ user.username }}</h1>
-        <div class="profile-email">{{ user.email }}</div>
-        {% if user.location %}
-            <div class="profile-location">
-                <i class="fas fa-map-marker-alt"></i>
-                {{ user.location }}
-            </div>
-        {% endif %}
-        {% if user.bio %}
-            <div class="profile-bio">{{ user.bio }}</div>
-        {% endif %}
-        <button class="btn-edit-profile" data-bs-toggle="modal" data-bs-target="#editProfileModal">
-            <i class="fas fa-edit"></i> Edit Profile
-        </button>
+        <p class="profile-email">{{ user.email }}</p>
+        
         <div class="profile-stats">
             <div class="stat-card">
-                <div class="stat-value">{{ user.get_ratings_count() }}</div>
-                <div class="stat-label">Total Ratings</div>
+                <div class="stat-value">{{ recent_activity|length }}</div>
+                <div class="stat-label">Ratings</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">{{ avg_rating|round(1) }}</div>
+                <div class="stat-value">{{ "%.1f"|format(avg_rating) }}</div>
                 <div class="stat-label">Average Rating</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value">{{ user.created_at.strftime('%b %Y') }}</div>
-                <div class="stat-label">Joined</div>
-            </div>
-        </div>
-    </div>
-
-    {% if user.favorite_movie or user.favorite_tv_show %}
-    <div class="profile-section">
-        <h2 class="section-title">
-            <i class="fas fa-heart"></i>
-            Favorites
-        </h2>
-        <div class="favorites-container">
-            {% if user.favorite_movie %}
-            <div class="favorite-item">
-                <div class="favorite-label">
-                    <i class="fas fa-film"></i>
-                    Favorite Movie
-                </div>
-                <div class="favorite-value">{{ user.favorite_movie }}</div>
-            </div>
-            {% endif %}
-            {% if user.favorite_tv_show %}
-            <div class="favorite-item">
-                <div class="favorite-label">
-                    <i class="fas fa-tv"></i>
-                    Favorite TV Show
-                </div>
-                <div class="favorite-value">{{ user.favorite_tv_show }}</div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
-
-    <div class="profile-section">
-        <h2 class="section-title">
-            <i class="fas fa-chart-bar"></i>
-            Favorite Genres
-        </h2>
-        <div class="favorite-genres">
-            {% if favorite_genres %}
-                {% for genre, count in favorite_genres %}
-                    <div class="genre-badge">
-                        <i class="fas fa-tag"></i>
-                        {{ genre }}
-                        <span class="genre-count">{{ count }}</span>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <div class="no-activity">
-                    <i class="fas fa-film"></i>
-                    <p>No genre preferences yet</p>
-                    <a href="{{ url_for('home') }}" class="btn btn-start-rating">
-                        Start Rating Movies
-                    </a>
-                </div>
-            {% endif %}
         </div>
     </div>
 
@@ -497,98 +423,31 @@
         </h2>
         <div class="activity-list">
             {% if recent_activity %}
-                {% for rating in recent_activity %}
-                    <div class="activity-item">
-                        <img src="https://image.tmdb.org/t/p/w92{{ rating.poster_path }}" 
-                             alt="{{ rating.title }}" 
-                             class="activity-poster"
-                             onerror="this.src='/static/images/no-poster.svg'">
-                        <div class="activity-content">
-                            <div class="activity-title">{{ rating.title }}</div>
-                            <div class="activity-meta">
-                                <div class="activity-rating">
-                                    {% for i in range(5) %}
-                                        <i class="fas fa-star {% if i < rating.rating %}active{% endif %}"></i>
-                                    {% endfor %}
-                                </div>
-                                <span>{{ rating.created_at.strftime('%B %d, %Y') }}</span>
+                {% for activity in recent_activity %}
+                <div class="activity-item">
+                    <div class="activity-content">
+                        <div class="activity-title">{{ activity.title }}</div>
+                        <div class="activity-meta">
+                            <span>{{ activity.media_type|title }}</span>
+                            <div class="activity-rating">
+                                <i class="fas fa-star"></i>
+                                {{ activity.rating }}/5
                             </div>
+                            <span>{{ activity.created_at|datetime }}</span>
                         </div>
                     </div>
+                </div>
                 {% endfor %}
             {% else %}
                 <div class="no-activity">
                     <i class="fas fa-film"></i>
                     <p>No ratings yet</p>
-                    <a href="{{ url_for('home') }}" class="btn btn-start-rating">
-                        Start Rating Movies
-                    </a>
+                    <a href="{{ url_for('home') }}" class="btn-start-rating">Start Rating</a>
                 </div>
             {% endif %}
         </div>
     </div>
 </div>
-
-<!-- Edit Profile Modal -->
-<div class="modal fade" id="editProfileModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Profile</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="editProfileForm">
-                    <div class="mb-3">
-                        <label class="form-label">Bio</label>
-                        <textarea class="form-control" name="bio" rows="3">{{ user.bio }}</textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Location</label>
-                        <input type="text" class="form-control" name="location" value="{{ user.location }}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Favorite Movie</label>
-                        <input type="text" class="form-control" name="favorite_movie" value="{{ user.favorite_movie }}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Favorite TV Show</label>
-                        <input type="text" class="form-control" name="favorite_tv_show" value="{{ user.favorite_tv_show }}">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="saveProfile">Save Changes</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Picture Modal -->
-<div class="modal fade" id="editPictureModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Change Profile Picture</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="uploadPictureForm" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label class="form-label">Choose Picture</label>
-                        <input type="file" class="form-control" name="profile_picture" accept="image/*">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="savePicture">Upload</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block scripts %}

@@ -423,16 +423,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fetch recommendations
     fetch('/get_recommendations')
         .then(response => response.json())
-        .then(recommendations => {
+        .then(data => {
             loadingSpinner.style.display = 'none';
             
-            if (recommendations.length === 0) {
+            if (!data.recommendations || data.recommendations.length === 0) {
                 noRecommendations.style.display = 'block';
                 return;
             }
 
             recommendationsGrid.style.display = 'grid';
-            recommendations.forEach(item => {
+            data.recommendations.forEach(item => {
                 const card = createMediaCard(item);
                 recommendationsGrid.appendChild(card);
             });

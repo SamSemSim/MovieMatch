@@ -1,50 +1,81 @@
-from app import db
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
 from flask_login import UserMixin
-import os
+from werkzeug.security import generate_password_hash, check_password_hash
+from services.firebase_service import FirebaseService
 from flask import url_for
+import os
 
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    profile_picture = db.Column(db.String(500), default='default-avatar.png')
-    bio = db.Column(db.Text, default='')
-    location = db.Column(db.String(100), default='')
-    favorite_movie = db.Column(db.String(200), default='')
-    favorite_tv_show = db.Column(db.String(200), default='')
-    ratings = db.relationship('UserPreference', 
-                            backref=db.backref('rater', lazy=True),
-                            lazy='dynamic',
-                            order_by='desc(UserPreference.created_at)',
-                            overlaps="user")
+firebase_service = FirebaseService()
 
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+class User(UserMixin):
+    def __init__(self, username, email, password_hash=None, id=None, **kwargs):
+        self.username = username
+        self.email = email
+        self.password_hash = password_hash
+        self.id = id or username  # Use username as ID if not provided
+        self.profile_picture = kwargs.get('profile_picture', 'default-avatar.png')
+        self.bio = kwargs.get('bio', '')
+        self.location = kwargs.get('location', '')
+        self.favorite_movie = kwargs.get('favorite_movie', '')
+        self.favorite_tv_show = kwargs.get('favorite_tv_show', '')
+        self.created_at = kwargs.get('created_at')
 
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-    def get_ratings_count(self):
-        return self.ratings.count()
-
-    def get_profile_picture_url(self):
-        if not self.profile_picture or not os.path.exists(os.path.join('static/images/profile', self.profile_picture)):
+    @property
+    def profile_picture_url(self):
+        """Get profile picture URL"""
+        if not self.profile_picture or self.profile_picture == 'default-avatar.png':
             return url_for('static', filename='images/default-avatar.png')
         return url_for('static', filename=f'images/profile/{self.profile_picture}')
 
+    @staticmethod
+    def create(username, email, password):
+        """Create a new user"""
+        user_data = {
+            'username': username,
+            'email': email,
+            'password_hash': generate_password_hash(password),
+            'id': username,
+            'profile_picture': 'default-avatar.png',
+            'bio': '',
+            'location': '',
+            'favorite_movie': '',
+            'favorite_tv_show': ''
+        }
+        firebase_service.create_user(user_data)
+        return User(**user_data)
+
+    @staticmethod
+    def get_by_username(username):
+        """Get user by username"""
+        user_data = firebase_service.get_user_by_username(username)
+        return User(**user_data) if user_data else None
+
+    @staticmethod
+    def get_by_id(user_id):
+        """Get user by ID"""
+        user_data = firebase_service.get_user_by_id(user_id)
+        return User(**user_data) if user_data else None
+
+    def check_password(self, password):
+        """Check password"""
+        return check_password_hash(self.password_hash, password)
+
+    def update_profile(self, update_data):
+        """Update user profile"""
+        firebase_service.update_user(self.username, update_data)
+        for key, value in update_data.items():
+            setattr(self, key, value)
+
     def to_dict(self):
+        """Convert user object to dictionary"""
         return {
-            'id': self.id,
             'username': self.username,
             'email': self.email,
-            'created_at': self.created_at.isoformat(),
-            'profile_picture': self.get_profile_picture_url(),
+            'id': self.id,
+            'profile_picture': self.profile_picture,
+            'profile_picture_url': self.profile_picture_url,
             'bio': self.bio,
             'location': self.location,
             'favorite_movie': self.favorite_movie,
-            'favorite_tv_show': self.favorite_tv_show
+            'favorite_tv_show': self.favorite_tv_show,
+            'created_at': self.created_at
         } 
