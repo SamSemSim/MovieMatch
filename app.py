@@ -13,6 +13,9 @@ load_dotenv()
 # Create Flask app with configuration
 app = Flask(__name__)
 
+# Ensure instance directory exists
+os.makedirs(os.path.join(app.root_path, 'instance'), exist_ok=True)
+
 # Load configuration
 class Config:
     # Basic Flask configuration

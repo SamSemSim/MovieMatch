@@ -2,7 +2,9 @@ services:
   - type: web
     name: moviematch
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      pip install -r requirements.txt
+      flask db upgrade
     startCommand: gunicorn -c gunicorn_config.py app:app
     envVars:
       - key: PYTHON_VERSION
@@ -13,6 +15,8 @@ services:
         generateValue: true
       - key: TMDB_API_KEY
         sync: false
+      - key: DATABASE_URL
+        value: sqlite:///instance/moviematch.db
     disk:
       name: sqlite-data
       mountPath: /opt/render/project/src/instance

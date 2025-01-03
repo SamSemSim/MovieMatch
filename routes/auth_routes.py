@@ -45,16 +45,20 @@ def login():
         username = data.get('username')
         password = data.get('password')
         
+        app.logger.info(f"Login attempt for username: {username}")
+        
         user = User.query.filter_by(username=username).first()
         
         if user and user.check_password(password):
             login_user(user)
+            app.logger.info(f"Login successful for user: {username}")
             next_page = request.args.get('next')
             
             if request.is_json:
                 return jsonify({'success': True, 'redirect': next_page or url_for('home')})
             return redirect(next_page or url_for('home'))
         
+        app.logger.warning(f"Login failed for username: {username}")
         if request.is_json:
             return jsonify({'success': False, 'error': 'Invalid username or password'}), 401
         flash('Invalid username or password', 'error')
@@ -73,36 +77,50 @@ def register():
         password = data.get('password')
         confirm_password = data.get('confirm_password')
         
+        app.logger.info(f"Registration attempt for username: {username}, email: {email}")
+        
         if password != confirm_password:
+            app.logger.warning("Registration failed: Passwords do not match")
             if request.is_json:
                 return jsonify({'success': False, 'error': 'Passwords do not match'}), 400
             flash('Passwords do not match', 'error')
             return redirect(url_for('register'))
         
         if User.query.filter_by(username=username).first():
+            app.logger.warning(f"Registration failed: Username {username} already exists")
             if request.is_json:
                 return jsonify({'success': False, 'error': 'Username already exists'}), 400
             flash('Username already exists', 'error')
             return redirect(url_for('register'))
             
         if User.query.filter_by(email=email).first():
+            app.logger.warning(f"Registration failed: Email {email} already registered")
             if request.is_json:
                 return jsonify({'success': False, 'error': 'Email already registered'}), 400
             flash('Email already registered', 'error')
             return redirect(url_for('register'))
         
-        user = User(username=username, email=email)
-        user.set_password(password)
-        
-        db.session.add(user)
-        db.session.commit()
-        
-        login_user(user)
-        
-        if request.is_json:
-            return jsonify({'success': True, 'redirect': url_for('home')})
-        return redirect(url_for('home'))
-        
+        try:
+            user = User(username=username, email=email)
+            user.set_password(password)
+            
+            db.session.add(user)
+            db.session.commit()
+            
+            login_user(user)
+            app.logger.info(f"Registration successful for user: {username}")
+            
+            if request.is_json:
+                return jsonify({'success': True, 'redirect': url_for('home')})
+            return redirect(url_for('home'))
+        except Exception as e:
+            app.logger.error(f"Registration error: {str(e)}")
+            db.session.rollback()
+            if request.is_json:
+                return jsonify({'success': False, 'error': 'Registration failed'}), 500
+            flash('Registration failed', 'error')
+            return redirect(url_for('register'))
+    
     return render_template('auth/register.html')
 
 @app.route('/logout')
