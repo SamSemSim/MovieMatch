@@ -2,21 +2,17 @@ services:
   - type: web
     name: moviematch
     env: python
-    buildCommand: |
-      pip install -r requirements.txt
-      export FLASK_APP=app.py
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn -c gunicorn_config.py app:app
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: 3.9.0
+      - key: FLASK_APP
+        value: app.py
       - key: FLASK_ENV
         value: production
-      - key: SECRET_KEY
-        generateValue: true
-      - key: TMDB_API_KEY
-        sync: false
-      - key: FIREBASE_CREDENTIALS
-        sync: false
+    healthCheckPath: /
+    autoDeploy: true
 
 databases:
   - name: moviematch-db

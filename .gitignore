@@ -1,7 +1,3 @@
-# Firebase
-firebase-credentials.json
-*firebase-adminsdk*.json
-
 # Python
 __pycache__/
 *.py[cod]
@@ -26,28 +22,53 @@ wheels/
 
 # Virtual Environment
 venv/
-ENV/
 env/
-.env
+ENV/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+.project
+.pydevproject
+.settings
+
+# Logs
+*.log
+logs/
+
+# Local development
+.env
+.env.local
+.env.*.local
+instance/
+.webassets-cache
+
+# Firebase
+firebase-credentials.json
+*firebase*.json
+
+# Media files
+static/images/profile/*
+!static/images/profile/default-avatar.png
 
 # Database
 *.db
-instance/
-
-# Logs
-logs/
-*.log
+*.sqlite
+*.sqlite3
 
 # Cache
-cache/
 .cache/
+.pytest_cache/
+.coverage
+htmlcov/
 
-# OS
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db 
