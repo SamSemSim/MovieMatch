@@ -4,7 +4,7 @@
 
 {% block additional_styles %}
 <style>
-    /* Scoping styles to main content only, not affecting navbar */
+    /* Scoping styles to recommendations page only */
     .recommendations-page {
         --card-bg: #1a1a1a;
         --text-primary: #ffffff;
@@ -71,44 +71,22 @@
         margin-bottom: 0.5rem;
     }
 
-    .tmdb-rating {
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-        margin-bottom: 1rem;
-    }
-
     .rating-stars {
         display: flex;
         gap: 0.25rem;
     }
 
-    .star {
-        color: #ccc;
-        cursor: pointer;
-        transition: transform 0.2s ease, color 0.2s ease;
-    }
-
-    .star.active {
-        color: #ffd700;
-    }
-
-    .star:hover {
-        transform: scale(1.2);
-    }
-
-    .rating-stars:hover .star {
+    .rating-stars .star {
         color: #ccc;
     }
 
-    .rating-stars:hover .star:hover,
-    .rating-stars:hover .star:hover ~ .star {
+    .rating-stars .star.active {
         color: #ffd700;
     }
 
     .rating-value {
         color: var(--text-secondary);
         font-size: 0.9rem;
-        margin-left: 0.5rem;
     }
 
     .media-overview {
@@ -149,40 +127,89 @@
         padding: 2rem 0;
     }
 
-    /* Filter Controls */
-    .filter-controls {
+    /* Section title */
+    .section-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+        color: var(--text-primary);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-        gap: 1rem;
     }
 
-    .media-type-filters {
-        display: flex;
-        gap: 1rem;
+    .section-title::after {
+        content: '';
+        flex-grow: 1;
+        height: 2px;
+        background: linear-gradient(to right, var(--accent-color), transparent);
+        margin-left: 1rem;
     }
 
-    .media-type-btn {
-        background: transparent;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+    /* Loading State */
+    .loading-state {
+        text-align: center;
+        padding: 4rem 2rem;
         color: var(--text-secondary);
-        padding: 0.5rem 1.5rem;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        transition: all 0.3s ease;
-        cursor: pointer;
     }
 
-    .media-type-btn:hover,
-    .media-type-btn.active {
+    .loading-state i {
+        font-size: 3rem;
+        color: var(--accent-color);
+        margin-bottom: 1rem;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-secondary);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        color: var(--accent-color);
+    }
+
+    .empty-state h3 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+    }
+
+    .empty-state p {
+        font-size: 1rem;
+        max-width: 600px;
+        margin: 0 auto 1.5rem;
+    }
+
+    .empty-state .btn-primary {
         background: var(--accent-color);
-        color: white;
-        border-color: var(--accent-color);
+        border: none;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.3s ease;
     }
 
-    /* Modal Styles */
+    .empty-state .btn-primary:hover {
+        background: var(--accent-hover);
+        transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+        .media-grid {
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+        }
+    }
+
+    /* Add Modal Styles */
     .modal-content {
         background: var(--card-bg);
         color: var(--text-primary);
@@ -206,7 +233,66 @@
         color: var(--text-secondary);
     }
 
-    /* Toast Styles */
+    /* Rating Stars in Modal */
+    .modal .rating-stars {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .modal .star {
+        color: #ccc;
+        cursor: pointer;
+        transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .modal .star.active {
+        color: #ffd700;
+    }
+
+    .modal .star:hover {
+        transform: scale(1.2);
+    }
+
+    .modal .rating-stars:hover .star {
+        color: #ccc;
+    }
+
+    .modal .rating-stars:hover .star:hover,
+    .modal .rating-stars:hover .star:hover ~ .star {
+        color: #ffd700;
+    }
+
+    /* Trailer Button */
+    .btn-trailer {
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-top: 1rem;
+    }
+
+    .btn-trailer:hover {
+        background: var(--accent-hover);
+        transform: translateY(-2px);
+    }
+
+    .trailer-container {
+        margin-top: 2rem;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .trailer-frame {
+        border: none;
+        background: #000;
+    }
+
+    /* Toast Notifications */
     .toast-container {
         position: fixed;
         bottom: 2rem;
@@ -237,129 +323,34 @@
     .toast.error i {
         color: #dc3545;
     }
-
-    /* Section title */
-    .section-title {
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 2rem;
-        color: var(--text-primary);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .section-title::after {
-        content: '';
-        flex-grow: 1;
-        height: 2px;
-        background: linear-gradient(to right, var(--accent-color), transparent);
-        margin-left: 1rem;
-    }
-
-    /* Empty state */
-    .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: var(--text-secondary);
-    }
-
-    .empty-state i {
-        font-size: 4rem;
-        margin-bottom: 1rem;
-        color: var(--accent-color);
-    }
-
-    .empty-state h3 {
-        font-size: 1.5rem;
-        margin-bottom: 1rem;
-        color: var(--text-primary);
-    }
-
-    .empty-state p {
-        font-size: 1rem;
-        max-width: 600px;
-        margin: 0 auto;
-    }
-
-    @media (max-width: 768px) {
-        .filter-controls {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .media-type-filters {
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .media-grid {
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-    }
-
-    /* Add to your existing styles */
-    .btn-trailer {
-        background: var(--accent-color);
-        color: white;
-        border: none;
-        padding: 0.75rem;
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-
-    .btn-trailer:hover {
-        background: var(--accent-hover);
-        transform: translateY(-2px);
-    }
-
-    .trailer-container {
-        margin-top: 2rem;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    .trailer-frame {
-        border: none;
-        background: #000;
-    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="recommendations-page">
     <div class="container">
-        <h2 class="section-title">Recommended For You</h2>
+        <h1 class="section-title">Recommended For You</h1>
         
-        <div class="filter-controls">
-            <div class="media-type-filters">
-                <button class="media-type-btn active" data-type="all">
-                    <i class="fas fa-film me-2"></i>All Types
-                </button>
-                <button class="media-type-btn" data-type="movie">
-                    <i class="fas fa-film me-2"></i>Movies
-                </button>
-                <button class="media-type-btn" data-type="tv">
-                    <i class="fas fa-tv me-2"></i>TV Shows
-                </button>
-                <button class="media-type-btn" data-type="anime">
-                    <i class="fas fa-play-circle me-2"></i>Anime
-                </button>
-            </div>
+        <!-- Loading State -->
+        <div id="loading-spinner" class="loading-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <h3>Getting Your Recommendations</h3>
+            <p>Please wait while we curate personalized content for you...</p>
         </div>
 
-        <div class="media-grid">
-            <!-- Media cards will be dynamically added here -->
+        <!-- Media Grid -->
+        <div class="media-grid" id="recommendations-grid" style="display: none;">
+            <!-- Cards will be inserted here by JavaScript -->
         </div>
 
-        <!-- Empty state -->
-        <div class="empty-state" style="display: none;">
+        <!-- Empty State -->
+        <div id="no-recommendations" class="empty-state" style="display: none;">
             <i class="fas fa-film"></i>
             <h3>No Recommendations Yet</h3>
-            <p>Rate some movies, TV shows, or anime to get personalized recommendations!</p>
+            <p>Rate some movies or TV shows to get personalized recommendations!</p>
+            <a href="{{ url_for('home') }}" class="btn btn-primary">
+                <i class="fas fa-search me-2"></i>Discover Content
+            </a>
         </div>
     </div>
 </div>
@@ -376,7 +367,7 @@
                 <div class="row">
                     <div class="col-md-4">
                         <img class="modal-poster img-fluid" alt="Media Poster">
-                        <button class="btn btn-trailer mt-3 w-100" style="display: none;">
+                        <button class="btn btn-trailer" style="display: none;">
                             <i class="fas fa-play me-2"></i>Watch Trailer
                         </button>
                     </div>
@@ -402,7 +393,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- Add trailer modal -->
+                <!-- Trailer Container -->
                 <div class="trailer-container mt-3" style="display: none;">
                     <div class="ratio ratio-16x9">
                         <iframe class="trailer-frame" src="" allowfullscreen></iframe>
@@ -420,251 +411,225 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const mediaTypeButtons = document.querySelectorAll('.media-type-btn');
-    const mediaGrid = document.querySelector('.media-grid');
-    const emptyState = document.querySelector('.empty-state');
+    const recommendationsGrid = document.getElementById('recommendations-grid');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const noRecommendations = document.getElementById('no-recommendations');
 
-    // Fetch recommendations when page loads
+    // Show loading spinner
+    loadingSpinner.style.display = 'block';
+    recommendationsGrid.style.display = 'none';
+    noRecommendations.style.display = 'none';
+
+    // Fetch recommendations
     fetch('/get_recommendations')
         .then(response => response.json())
         .then(recommendations => {
-            mediaGrid.innerHTML = ''; // Clear existing content
+            loadingSpinner.style.display = 'none';
             
             if (recommendations.length === 0) {
-                emptyState.style.display = 'block';
+                noRecommendations.style.display = 'block';
                 return;
             }
 
-            emptyState.style.display = 'none';
-            recommendations.forEach(media => {
-                const card = createMediaCard(media);
-                mediaGrid.appendChild(card);
+            recommendationsGrid.style.display = 'grid';
+            recommendations.forEach(item => {
+                const card = createMediaCard(item);
+                recommendationsGrid.appendChild(card);
             });
         })
         .catch(error => {
             console.error('Error fetching recommendations:', error);
-            showToast('Error loading recommendations. Please try again later.', 'error');
-            emptyState.style.display = 'block';
+            loadingSpinner.style.display = 'none';
+            noRecommendations.style.display = 'block';
+        });
+});
+
+function createMediaCard(item) {
+    const card = document.createElement('div');
+    card.className = 'media-card';
+    card.onclick = () => showMediaDetails(item.id, item.media_type);
+
+    const mediaType = item.media_type === 'movie' ? 'movie' : 'tv';
+    const title = item.title || item.name;
+    const releaseDate = item.release_date || item.first_air_date;
+    const year = releaseDate ? new Date(releaseDate).getFullYear() : 'N/A';
+    
+    // Calculate number of active stars (convert from 10-point to 5-point scale)
+    const rating = Math.round(item.vote_average / 2);
+    const stars = Array(5).fill(0).map((_, i) => 
+        `<i class="fas fa-star star${i < rating ? ' active' : ''}"></i>`
+    ).join('');
+
+    card.innerHTML = `
+        <div class="media-type-badge">
+            <i class="fas ${mediaType === 'movie' ? 'fa-film' : 'fa-tv'}"></i>
+            ${mediaType.toUpperCase()}
+        </div>
+        <img src="${item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : '/static/images/no-poster.png'}"
+             alt="${title}"
+             class="media-poster"
+             onerror="this.src='/static/images/no-poster.png'">
+        <div class="media-info">
+            <h3 class="media-title">${title}</h3>
+            <div class="media-year">${year}</div>
+            <div class="media-rating">
+                <div class="rating-stars">
+                    ${stars}
+                </div>
+                <span class="rating-value">${item.vote_average.toFixed(1)}/10</span>
+            </div>
+            <p class="media-overview">${item.overview || 'No overview available.'}</p>
+        </div>
+    `;
+
+    return card;
+}
+
+function showMediaDetails(mediaId, mediaType) {
+    fetch('/get_details', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            media_type: mediaType,
+            tmdb_id: mediaId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const modal = document.getElementById('mediaDetailsModal');
+        
+        // Update modal content
+        modal.querySelector('.modal-title').textContent = data.title;
+        modal.querySelector('.modal-poster').src = data.poster_path ? 
+            `https://image.tmdb.org/t/p/w500${data.poster_path}` : '/static/images/no-poster.png';
+        modal.querySelector('.modal-year').textContent = data.release_date ? 
+            new Date(data.release_date).getFullYear() : 'N/A';
+        modal.querySelector('.modal-overview').textContent = data.overview || 'No overview available';
+        
+        // Show only the original TMDB rating
+        modal.querySelector('.tmdb-rating-value').textContent = `${data.vote_average.toFixed(1)}/10`;
+        
+        // Update genres
+        const genres = data.genres.map(genre => genre.name).join(', ');
+        modal.querySelector('.genres').textContent = `Genres: ${genres}`;
+        
+        // Update runtime
+        if (data.runtime) {
+            const hours = Math.floor(data.runtime / 60);
+            const minutes = data.runtime % 60;
+            modal.querySelector('.runtime').textContent = `Runtime: ${hours}h ${minutes}m`;
+        } else {
+            modal.querySelector('.runtime').textContent = '';
+        }
+        
+        // Update release date
+        modal.querySelector('.release-date').textContent = `Release Date: ${data.release_date || 'N/A'}`;
+
+        // Initialize rating stars
+        const stars = modal.querySelectorAll('.rating-stars .star');
+        stars.forEach((star, index) => {
+            star.classList.remove('active');
+            star.onclick = () => rateMedia(mediaId, mediaType, index + 1);
+            if (data.user_rating && index < data.user_rating) {
+                star.classList.add('active');
+            }
         });
 
-    // Function to create media card
-    function createMediaCard(media) {
-        const card = document.createElement('div');
-        card.className = 'media-card';
-        card.dataset.id = media.id;
-        card.dataset.type = media.media_type;
+        // Update rating text
+        modal.querySelector('.user-rating-text').textContent = data.user_rating ? 
+            `Your Rating: ${data.user_rating}/5` : 'Your Rating: Not rated yet';
 
-        const userRating = media.user_rating;
-        const tmdbRating = media.vote_average / 2;
-        const stars = [];
-        for (let i = 0; i < 5; i++) {
-            stars.push(`<i class="fas fa-star star ${userRating && i < userRating ? 'active' : !userRating && i < Math.floor(tmdbRating) ? 'active' : ''}"></i>`);
+        // Handle trailer
+        const trailerBtn = modal.querySelector('.btn-trailer');
+        const trailerContainer = modal.querySelector('.trailer-container');
+        const trailerFrame = modal.querySelector('.trailer-frame');
+
+        // Find trailer video
+        const trailer = data.videos?.results?.find(video => 
+            video.type === 'Trailer' && video.site === 'YouTube'
+        );
+
+        if (trailer) {
+            trailerBtn.style.display = 'block';
+            trailerBtn.onclick = () => {
+                trailerContainer.style.display = 'block';
+                trailerFrame.src = `https://www.youtube.com/embed/${trailer.key}`;
+            };
+        } else {
+            trailerBtn.style.display = 'none';
+            trailerContainer.style.display = 'none';
         }
 
-        card.innerHTML = `
-            <div class="media-type-badge">
-                <i class="fas ${media.media_type === 'movie' ? 'fa-film' : media.media_type === 'tv' ? 'fa-tv' : 'fa-play-circle'}"></i>
-                ${media.media_type.toUpperCase()}
-            </div>
-            <img src="${media.media_type === 'anime' ? media.poster_path : `https://image.tmdb.org/t/p/w500${media.poster_path}`}" 
-                 alt="${media.title}" 
-                 class="media-poster"
-                 onerror="this.src='/static/images/no-poster.svg'">
-            <div class="media-info">
-                <h3 class="media-title">${media.title}</h3>
-                <div class="media-year">
-                    ${media.release_date ? media.release_date.substring(0, 4) : 'N/A'}
-                </div>
-                <div class="media-rating">
-                    <div class="rating-stars">
-                        ${stars.join('')}
-                    </div>
-                    <span class="rating-value">${userRating ? `${userRating}/5` : `${tmdbRating.toFixed(1)}/5`}</span>
-                </div>
-                ${userRating ? `
-                <div class="tmdb-rating">
-                    <span class="text-secondary">TMDB: ${tmdbRating.toFixed(1)}/5</span>
-                </div>
-                ` : ''}
-                <p class="media-overview">${media.overview}</p>
-            </div>
-        `;
-
-        return card;
-    }
-
-    // Media type filter
-    mediaTypeButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            mediaTypeButtons.forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            
-            const mediaType = this.dataset.type;
-            const mediaCards = document.querySelectorAll('.media-card');
-            
-            mediaCards.forEach(card => {
-                if (mediaType === 'all' || card.dataset.type === mediaType) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
+        // Clean up trailer when modal is closed
+        modal.addEventListener('hidden.bs.modal', function () {
+            trailerFrame.src = '';
+            trailerContainer.style.display = 'none';
         });
+
+        // Show modal
+        new bootstrap.Modal(modal).show();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error loading media details. Please try again.', 'error');
     });
+}
 
-    // Media card click handler
-    mediaGrid.addEventListener('click', function(e) {
-        const mediaCard = e.target.closest('.media-card');
-        if (!mediaCard) return;
-
-        const mediaId = mediaCard.dataset.id;
-        const mediaType = mediaCard.dataset.type;
-
-        // Fetch media details
-        fetch('/get_details', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                media_type: mediaType,
-                tmdb_id: mediaId
-            })
+function rateMedia(mediaId, mediaType, rating) {
+    fetch('/add_preference', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            media_type: mediaType,
+            tmdb_id: mediaId,
+            rating: rating,
+            title: document.querySelector('#mediaDetailsModal .modal-title').textContent
         })
-        .then(response => response.json())
-        .then(data => {
-            // Update modal content
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            // Update UI
             const modal = document.getElementById('mediaDetailsModal');
-            modal.querySelector('.modal-title').textContent = data.title;
-            modal.querySelector('.modal-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
-            modal.querySelector('.modal-year').textContent = data.release_date ? new Date(data.release_date).getFullYear() : 'N/A';
-            modal.querySelector('.modal-overview').textContent = data.overview;
-            modal.querySelector('.tmdb-rating-value').textContent = `${(data.vote_average).toFixed(1)}/5`;
-            
-            // Update genres
-            const genres = data.genres.map(genre => genre.name).join(', ');
-            modal.querySelector('.genres').textContent = `Genres: ${genres}`;
-            
-            // Update runtime
-            if (data.runtime) {
-                const hours = Math.floor(data.runtime / 60);
-                const minutes = data.runtime % 60;
-                modal.querySelector('.runtime').textContent = `Runtime: ${hours}h ${minutes}m`;
-            }
-            
-            // Update release date
-            modal.querySelector('.release-date').textContent = `Release Date: ${data.release_date || 'N/A'}`;
-
-            // Initialize rating stars and show user's rating if it exists
             const stars = modal.querySelectorAll('.rating-stars .star');
             stars.forEach((star, index) => {
-                // Clear previous state
-                star.classList.remove('active');
-                // Set click handler
-                star.onclick = () => rateMedia(mediaId, mediaType, index + 1);
-                // If user has rated this media, show their rating
-                if (data.user_rating && index < data.user_rating) {
-                    star.classList.add('active');
-                }
+                star.classList.toggle('active', index < rating);
             });
+            modal.querySelector('.user-rating-text').textContent = `Your Rating: ${rating}/5`;
+            
+            showToast('Rating saved successfully!', 'success');
 
-            // Update rating text
-            if (data.user_rating) {
-                modal.querySelector('.user-rating-text').textContent = `Your Rating: ${data.user_rating}/5`;
-            } else {
-                modal.querySelector('.user-rating-text').textContent = 'Your Rating: Not rated yet';
-            }
-
-            // Handle trailer
-            const trailerBtn = modal.querySelector('.btn-trailer');
-            const trailerContainer = modal.querySelector('.trailer-container');
-            const trailerFrame = modal.querySelector('.trailer-frame');
-
-            // Find trailer video
-            const trailer = data.videos?.results?.find(video => 
-                video.type === 'Trailer' && video.site === 'YouTube'
-            );
-
-            if (trailer) {
-                trailerBtn.style.display = 'block';
-                trailerBtn.onclick = () => {
-                    trailerContainer.style.display = 'block';
-                    trailerFrame.src = `https://www.youtube.com/embed/${trailer.key}`;
-                };
-            } else {
-                trailerBtn.style.display = 'none';
-                trailerContainer.style.display = 'none';
-            }
-
-            // Clean up trailer when modal is closed
-            modal.addEventListener('hidden.bs.modal', function () {
-                trailerFrame.src = '';
-                trailerContainer.style.display = 'none';
-            });
-
-            // Show modal
-            new bootstrap.Modal(modal).show();
-        })
-        .catch(error => console.error('Error:', error));
+            // Refresh recommendations after a short delay
+            setTimeout(() => location.reload(), 1000);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error saving rating. Please try again.', 'error');
     });
+}
 
-    // Function to handle rating
-    function rateMedia(mediaId, mediaType, rating) {
-        fetch('/add_preference', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                media_type: mediaType,
-                tmdb_id: mediaId,
-                rating: rating,
-                title: document.querySelector('#mediaDetailsModal .modal-title').textContent
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.message) {
-                // Update UI to show the rating
-                const modal = document.getElementById('mediaDetailsModal');
-                const stars = modal.querySelectorAll('.rating-stars .star');
-                stars.forEach((star, index) => {
-                    star.classList.toggle('active', index < rating);
-                });
-                modal.querySelector('.user-rating-text').textContent = `Your Rating: ${rating}/5`;
-                
-                // Show success message
-                showToast('Rating saved successfully!', 'success');
-
-                // Refresh recommendations after rating
-                location.reload();
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('Error saving rating. Please try again.', 'error');
-        });
-    }
-
-    // Function to show toast notifications
-    function showToast(message, type = 'info') {
-        const toastContainer = document.querySelector('.toast-container');
-        const toast = document.createElement('div');
-        toast.className = `toast ${type} show`;
-        toast.innerHTML = `
-            <div class="toast-body">
-                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
-                ${message}
-            </div>
-        `;
-        
-        toastContainer.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 5000);
-    }
-});
+function showToast(message, type = 'info') {
+    const toastContainer = document.querySelector('.toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type} show`;
+    toast.innerHTML = `
+        <div class="toast-body">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
+            ${message}
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
 </script>
 {% endblock %} 

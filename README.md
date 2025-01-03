@@ -1,157 +1,184 @@
-# MovieMatch - Movie and TV Show Recommendation App
+# MovieMatch
 
-A modern web application that provides personalized movie and TV show recommendations based on your viewing preferences. Built with Flask and powered by TMDB and Jikan APIs.
-
-
+A movie and TV show recommendation platform that helps users discover content based on their preferences.
 
 ## Features
 
-- 🎬 Search for movies, TV shows, and anime
-- ⭐ Rate content you've watched
-- 🎯 Get personalized recommendations based on your ratings
-- 📱 Modern, responsive interface
-- 🎨 Dark mode design
-- 🎥 Watch trailers directly in the app
-- 📊 Filter and sort your ratings
-- 🔄 Real-time updates
+- User authentication and profile management
+- Movie and TV show search
+- Personalized recommendations based on user ratings
+- Trailer viewing functionality
+- Responsive design for mobile and desktop
 
 ## Tech Stack
 
-- **Backend**: Python Flask
-- **Database**: SQLite with SQLAlchemy
-- **Frontend**: HTML, CSS, JavaScript
-- **UI Framework**: Bootstrap 5
-- **APIs**: 
-  - TMDB (The Movie Database) for movies and TV shows
-  - Jikan API for anime content
+- Python 3.11
+- Flask web framework
+- SQLite database
+- TMDB API for movie/TV data
+- Bootstrap 5 for UI
+- JavaScript for frontend interactivity
 
 ## Prerequisites
 
-- Python 3.8 or higher
+- Python 3.11 or higher
 - pip (Python package manager)
-- TMDB API key (get it from [TMDB website](https://www.themoviedb.org/))
+- TMDB API key
 
 ## Installation
 
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/yourusername/moviematch.git
-   cd moviematch
-   ```
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/moviematch.git
+cd moviematch
+```
 
 2. Create and activate a virtual environment:
-   ```bash
-   # Windows
-   python -m venv venv
-   venv\Scripts\activate
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-   # Linux/macOS
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-3. Install the required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Set up your environment variables:
-   ```bash
-   # Create .env file
-   cp .env.example .env
-   
-   # Edit .env and add your TMDB API key
-   TMDB_API_KEY=your_tmdb_api_key_here
-   ```
+4. Create a `.env` file in the root directory with the following variables:
+```
+FLASK_ENV=development
+SECRET_KEY=your-secret-key
+TMDB_API_KEY=your-tmdb-api-key
+```
 
 5. Initialize the database:
-   ```bash
-   flask db upgrade
-   ```
-
-6. Run the application:
-   ```bash
-   python app.py
-   ```
-
-7. Open your browser and navigate to `http://localhost:5000`
-
-## Project Structure
-
+```bash
+flask db upgrade
 ```
-moviematch/
-├── app.py              # Application entry point
-├── config/            # Configuration files
-├── models/            # Database models
-├── routes/            # Route handlers
-├── services/          # External API services
-├── static/            # Static files (CSS, JS)
-├── templates/         # HTML templates
-├── migrations/        # Database migrations
-├── requirements.txt   # Python dependencies
-└── README.md         # Project documentation
-```
-
-## API Endpoints
-
-- `GET /` - Home page
-- `POST /search` - Search for movies, TV shows, and anime
-- `GET /my_ratings` - View user ratings
-- `POST /add_preference` - Add or update a rating
-- `DELETE /delete_rating/<id>` - Delete a rating
-- `GET /recommendations` - Get personalized recommendations
-- `GET /top_rated/<media_type>` - Get top-rated content by media type
-
-## Contributing
-
-We welcome contributions to MovieMatch! Here's how you can help:
-
-1. Fork the repository
-2. Create a new branch (`git checkout -b feature/improvement`)
-3. Make your changes
-4. Run tests if available
-5. Commit your changes (`git commit -am 'Add new feature'`)
-6. Push to the branch (`git push origin feature/improvement`)
-7. Create a Pull Request
 
 ## Development
 
-To run the application in development mode with debug enabled:
-
+Run the development server:
 ```bash
-export FLASK_ENV=development
-export FLASK_DEBUG=1
 python app.py
 ```
 
-## Troubleshooting
+The application will be available at `http://localhost:5000`
 
-Common issues and solutions:
+## Deployment
 
-1. **API Key Issues**
-   - Ensure your TMDB API key is correctly set in the `.env` file
-   - Verify the API key is active in your TMDB account dashboard
+### Prerequisites for Deployment
 
-2. **Database Errors**
-   - Make sure you have write permissions in the `instance` directory
-   - Try deleting the database file and restarting the application
+- Git
+- Python 3.11
+- PostgreSQL (for production)
+- Gunicorn
 
-3. **Dependencies Issues**
-   - Clear your Python cache: `python -m pip cache purge`
-   - Ensure you're using Python 3.8 or higher
-   - Try creating a new virtual environment
+### Deployment Steps
+
+1. Set up environment variables in your production environment:
+   - `FLASK_ENV=production`
+   - `SECRET_KEY`
+   - `TMDB_API_KEY`
+   - `DATABASE_URL` (if using PostgreSQL)
+
+2. Install production dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Initialize the database:
+```bash
+flask db upgrade
+```
+
+4. Run with Gunicorn:
+```bash
+gunicorn -c gunicorn_config.py app:app
+```
+
+## API Documentation
+
+### Authentication Endpoints
+
+#### POST /auth/register
+Register a new user.
+- Request body:
+  ```json
+  {
+    "username": "string",
+    "email": "string",
+    "password": "string"
+  }
+  ```
+
+#### POST /auth/login
+Login a user.
+- Request body:
+  ```json
+  {
+    "username": "string",
+    "password": "string"
+  }
+  ```
+
+### Media Endpoints
+
+#### GET /search
+Search for movies and TV shows.
+- Query parameters:
+  - `query`: Search term
+  - `media_type`: "movie" or "tv"
+
+#### POST /add_preference
+Add or update a media rating.
+- Request body:
+  ```json
+  {
+    "media_type": "string",
+    "tmdb_id": "integer",
+    "rating": "integer",
+    "title": "string"
+  }
+  ```
+
+#### GET /get_recommendations
+Get personalized recommendations.
+- Requires authentication
+- Returns recommended movies and TV shows based on user preferences
+
+## Error Handling
+
+The application includes custom error pages and logging:
+- 404 Not Found
+- 500 Internal Server Error
+- All errors are logged to `logs/error.log`
+- General application logs in `logs/info.log`
+
+## Caching
+
+The application implements caching for API responses:
+- Search results: 5 minutes
+- Media details: 1 hour
+- Recommendations: 1 hour
+
+## Security
+
+- CSRF protection enabled
+- Secure session configuration
+- Password hashing
+- XSS protection
+- Content Security Policy
+- Rate limiting on API endpoints
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [TMDB](https://www.themoviedb.org/) for their comprehensive movie and TV show database
-- [Jikan API](https://jikan.moe/) for providing anime data
-- [Bootstrap](https://getbootstrap.com/) for the UI framework
-- [Font Awesome](https://fontawesome.com/) for the icons
-
-## Contact
-
-If you have any questions or suggestions, please open an issue or submit a pull request. 
+This project is licensed under the MIT License - see the LICENSE file for details. 

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}500 - Server Error{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1 class="display-1 text-danger mb-4">500</h1>
+            <h2 class="mb-4">Internal Server Error</h2>
+            <p class="lead mb-5">Something went wrong on our end. Please try again later.</p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{{ url_for('home') }}" class="btn btn-primary">
+                    <i class="fas fa-home me-2"></i>Go Home
+                </a>
+                <button onclick="history.back()" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Go Back
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

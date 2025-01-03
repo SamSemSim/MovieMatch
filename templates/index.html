@@ -348,9 +348,6 @@
                 <button class="media-type-btn" data-type="tv">
                     <i class="fas fa-tv me-2"></i>TV Shows
                 </button>
-                <button class="media-type-btn" data-type="anime">
-                    <i class="fas fa-play-circle me-2"></i>Anime
-                </button>
             </div>
         </div>
 
@@ -384,15 +381,42 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.querySelector('.search-input');
     const mediaGrid = document.querySelector('.media-grid');
     const mediaTypeButtons = document.querySelectorAll('.media-type-btn');
-    const emptyState = document.querySelector('.empty-state');
+    let currentMediaType = 'all';
     let searchTimeout;
+
+    // Function to show toast notifications
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = message;
+        document.querySelector('.toast-container').appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 100);
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
 
     // Handle search input
     searchInput.addEventListener('input', function(e) {
         clearTimeout(searchTimeout);
         const query = e.target.value.trim();
         
+        // Clear results if search is empty
+        if (query.length === 0) {
+            location.reload();
+            return;
+        }
+
+        // Wait for at least 2 characters
         if (query.length < 2) return;
+
+        // Show loading state
+        mediaGrid.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>Searching...</h3></div>';
 
         searchTimeout = setTimeout(() => {
             fetch('/search', {
@@ -402,23 +426,55 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({ query: query })
             })
-            .then(response => response.json())
-            .then(results => {
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Search failed');
+                }
+                return response.json();
+            })
+            .then(data => {
                 mediaGrid.innerHTML = '';
+                const results = data.results || [];
+                
                 if (results.length === 0) {
-                    emptyState.style.display = 'block';
+                    mediaGrid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <h3>No Results Found</h3>
+                            <p>Try different keywords or filters</p>
+                        </div>
+                    `;
                 } else {
-                    emptyState.style.display = 'none';
                     results.forEach(media => {
-                        const card = createMediaCard(media);
-                        mediaGrid.appendChild(card);
+                        if (currentMediaType === 'all' || media.media_type === currentMediaType) {
+                            const card = createMediaCard(media);
+                            mediaGrid.appendChild(card);
+                        }
                     });
+
+                    // Check if any cards are visible after filtering
+                    const visibleCards = mediaGrid.querySelectorAll('.media-card[style*="display: block"]');
+                    if (visibleCards.length === 0) {
+                        mediaGrid.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-filter"></i>
+                                <h3>No Results Found</h3>
+                                <p>Try a different filter</p>
+                            </div>
+                        `;
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
+                mediaGrid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h3>Search Error</h3>
+                        <p>Please try again later</p>
+                    </div>
+                `;
                 showToast('Error searching. Please try again.', 'error');
-                emptyState.style.display = 'block';
             });
         }, 500);
     });
@@ -429,12 +485,12 @@ document.addEventListener('DOMContentLoaded', function() {
             mediaTypeButtons.forEach(btn => btn.classList.remove('active'));
             this.classList.add('active');
             
-            const mediaType = this.dataset.type;
+            currentMediaType = this.dataset.type;
             const mediaCards = document.querySelectorAll('.media-card');
             let visibleCards = 0;
             
             mediaCards.forEach(card => {
-                if (mediaType === 'all' || card.dataset.type === mediaType) {
+                if (currentMediaType === 'all' || card.dataset.type === currentMediaType) {
                     card.style.display = 'block';
                     visibleCards++;
                 } else {
@@ -442,11 +498,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            // Show/hide empty state based on visible cards
             if (visibleCards === 0) {
-                emptyState.style.display = 'block';
-            } else {
-                emptyState.style.display = 'none';
+                mediaGrid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-filter"></i>
+                        <h3>No Results Found</h3>
+                        <p>Try a different filter</p>
+                    </div>
+                `;
             }
         });
     });
@@ -457,20 +516,27 @@ document.addEventListener('DOMContentLoaded', function() {
         card.className = 'media-card';
         card.dataset.id = media.id;
         card.dataset.type = media.media_type;
+        card.style.display = currentMediaType === 'all' || media.media_type === currentMediaType ? 'block' : 'none';
 
         const userRating = media.user_rating;
-        const tmdbRating = media.vote_average / 2;
+        const tmdbRating = media.vote_average;
         const stars = [];
         for (let i = 0; i < 5; i++) {
-            stars.push(`<i class="fas fa-star star ${userRating && i < userRating ? 'active' : !userRating && i < Math.floor(tmdbRating) ? 'active' : ''}"></i>`);
+            stars.push(`<i class="fas fa-star star ${userRating && i < userRating ? 'active' : !userRating && i < Math.floor(tmdbRating/2) ? 'active' : ''}"></i>`);
         }
+
+        const posterUrl = media.media_type === 'anime' 
+            ? media.poster_path 
+            : media.poster_path 
+                ? `https://image.tmdb.org/t/p/w500${media.poster_path}`
+                : '/static/images/no-poster.svg';
 
         card.innerHTML = `
             <div class="media-type-badge">
                 <i class="fas ${media.media_type === 'movie' ? 'fa-film' : media.media_type === 'tv' ? 'fa-tv' : 'fa-play-circle'}"></i>
                 ${media.media_type.toUpperCase()}
             </div>
-            <img src="${media.media_type === 'anime' ? media.poster_path : `https://image.tmdb.org/t/p/w500${media.poster_path}`}" 
+            <img src="${posterUrl}" 
                  alt="${media.title}" 
                  class="media-poster"
                  onerror="this.src='/static/images/no-poster.svg'">
@@ -483,38 +549,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="rating-stars">
                         ${stars.join('')}
                     </div>
-                    <span class="rating-value">${userRating ? `${userRating}/5` : `${tmdbRating.toFixed(1)}/5`}</span>
+                    <span class="rating-value">${userRating ? `${userRating}/5` : `${tmdbRating.toFixed(1)}/10`}</span>
                 </div>
                 ${userRating ? `
                 <div class="tmdb-rating">
-                    <span class="text-secondary">TMDB: ${tmdbRating.toFixed(1)}/5</span>
+                    <span class="text-secondary">TMDB: ${tmdbRating.toFixed(1)}/10</span>
                 </div>
                 ` : ''}
-                <p class="media-overview">${media.overview}</p>
+                <p class="media-overview">${media.overview || 'No overview available'}</p>
             </div>
         `;
+
+        // Add click event to show modal
+        card.addEventListener('click', () => {
+            const modalEvent = new CustomEvent('showMediaModal', {
+                detail: {
+                    id: media.id,
+                    type: media.media_type,
+                    title: media.title,
+                    userRating: media.user_rating
+                }
+            });
+            document.dispatchEvent(modalEvent);
+        });
 
         return card;
-    }
-
-    // Function to show toast notifications
-    function showToast(message, type = 'info') {
-        const toastContainer = document.querySelector('.toast-container');
-        const toast = document.createElement('div');
-        toast.className = `toast ${type} show`;
-        toast.innerHTML = `
-            <div class="toast-body">
-                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
-                ${message}
-            </div>
-        `;
-        
-        toastContainer.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 5000);
     }
 });
 </script>

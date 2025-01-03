@@ -1,9 +1,9 @@
 from datetime import datetime
-from flask import render_template, request, jsonify, redirect, url_for
+from flask import render_template, request, jsonify, redirect, url_for, flash
 from app import app, db
 from models.user_preference import UserPreference
 from models.user import User
-from services.tmdb_service import search_media, fetch_movie_details, get_media_details, TMDB_API_KEY, TMDB_BASE_URL
+from services.tmdb_service import search_media, fetch_movie_details, get_media_details, TMDB_API_KEY, TMDB_BASE_URL, get_recommendations_for_item
 from services.anime_service import search_anime, get_anime_details, format_anime_result, JIKAN_BASE_URL
 from services.recommendation_service import get_recommendations
 from flask_login import login_required, current_user
@@ -79,7 +79,6 @@ def home():
         return render_template('index.html', top_rated=[])
 
 @app.route('/search', methods=['POST'])
-@login_required
 def search():
     try:
         data = request.get_json()
@@ -104,7 +103,7 @@ def search():
                     user_ratings[f"{rating.media_type}_{rating.tmdb_id}"] = rating.rating
                 elif rating.media_type == 'anime':
                     user_ratings[f"anime_{rating.mal_id}"] = rating.rating
-        
+
         # Search for anime
         try:
             anime_results = search_anime(query)
@@ -123,14 +122,12 @@ def search():
                 for item in movie_results:
                     if item and isinstance(item, dict):
                         processed_item = {
-                            'title': item.get('title') or item.get('name', 'Unknown Title'),
-                            'name': item.get('name') or item.get('title', 'Unknown Title'),
-                            'vote_average': float(item.get('vote_average', 0)),
                             'id': item.get('id', 0),
-                            'poster_path': item.get('poster_path', ''),
+                            'title': item.get('title', 'Unknown Title'),
                             'overview': item.get('overview', ''),
+                            'poster_path': item.get('poster_path', ''),
+                            'vote_average': float(item.get('vote_average', 0)),
                             'release_date': item.get('release_date', ''),
-                            'first_air_date': item.get('first_air_date', ''),
                             'media_type': 'movie',
                             'user_rating': user_ratings.get(f"movie_{item.get('id')}")
                         }
@@ -145,21 +142,19 @@ def search():
                 for item in tv_results:
                     if item and isinstance(item, dict):
                         processed_item = {
-                            'title': item.get('name') or item.get('title', 'Unknown Title'),
-                            'name': item.get('name') or item.get('title', 'Unknown Title'),
-                            'vote_average': float(item.get('vote_average', 0)),
                             'id': item.get('id', 0),
-                            'poster_path': item.get('poster_path', ''),
+                            'title': item.get('name', 'Unknown Title'),
                             'overview': item.get('overview', ''),
+                            'poster_path': item.get('poster_path', ''),
+                            'vote_average': float(item.get('vote_average', 0)),
                             'release_date': item.get('first_air_date', ''),
-                            'first_air_date': item.get('first_air_date', ''),
                             'media_type': 'tv',
                             'user_rating': user_ratings.get(f"tv_{item.get('id')}")
                         }
                         all_results.append(processed_item)
         except Exception as e:
             print(f"TV search error: {str(e)}")
-        
+
         # Sort results by vote average
         all_results.sort(key=lambda x: float(x.get('vote_average', 0)), reverse=True)
         
@@ -265,48 +260,48 @@ def add_preference():
 
 @app.route('/get_recommendations')
 @login_required
-def get_recommendations_route():
+def get_recommendations():
     try:
-        # Get user's ratings
-        user_ratings = {}
-        if current_user.is_authenticated:
-            ratings = UserPreference.query.filter_by(user_id=current_user.id).all()
-            for rating in ratings:
-                if rating.media_type == 'movie' or rating.media_type == 'tv':
-                    user_ratings[f"{rating.media_type}_{rating.tmdb_id}"] = rating.rating
-                elif rating.media_type == 'anime':
-                    user_ratings[f"anime_{rating.mal_id}"] = rating.rating
-
-        # Get recommendations
-        recommendations = get_recommendations()
-
-        # Add user ratings to recommendations
-        for rec in recommendations:
-            if rec.get('media_type') == 'anime':
-                rec['user_rating'] = user_ratings.get(f"anime_{rec.get('id')}")
-            else:
-                rec['user_rating'] = user_ratings.get(f"{rec.get('media_type')}_{rec.get('id')}")
-
-            # Ensure title is set
-            if not rec.get('title'):
-                rec['title'] = rec.get('name', 'Unknown Title')
-
-            # Ensure release_date is set
-            if not rec.get('release_date'):
-                rec['release_date'] = rec.get('first_air_date', 'N/A')
-
-            # Ensure overview is set
-            if not rec.get('overview'):
-                rec['overview'] = 'No overview available'
-
-            # Normalize vote_average to 5-point scale
-            if rec.get('vote_average'):
-                rec['vote_average'] = float(rec['vote_average'])
-
-        return jsonify(recommendations)
+        # Get user's preferences
+        user_preferences = UserPreference.query.filter_by(user_id=current_user.id).all()
+        app.logger.info(f"Found {len(user_preferences)} preferences for user {current_user.id}")
+        
+        if not user_preferences:
+            app.logger.info("No preferences found, returning empty list")
+            return jsonify([])
+        
+        # Get recommendations for each preference
+        all_recommendations = []
+        seen_items = set()  # Track items we've already recommended
+        
+        for pref in user_preferences:
+            try:
+                app.logger.info(f"Getting recommendations for {pref.media_type} {pref.tmdb_id}")
+                # Get recommendations for this item
+                recommendations = get_recommendations_for_item(pref.tmdb_id, pref.media_type)
+                app.logger.info(f"Received {len(recommendations)} recommendations")
+                
+                # Filter out items we've already recommended
+                for rec in recommendations:
+                    item_key = f"{rec['media_type']}_{rec['id']}"
+                    if item_key not in seen_items:
+                        seen_items.add(item_key)
+                        all_recommendations.append(rec)
+                        
+            except Exception as e:
+                app.logger.error(f"Error getting recommendations for {pref.media_type} {pref.tmdb_id}: {str(e)}")
+                continue
+        
+        app.logger.info(f"Total unique recommendations found: {len(all_recommendations)}")
+        
+        # Sort by vote average
+        all_recommendations.sort(key=lambda x: x.get('vote_average', 0), reverse=True)
+        
+        return jsonify(all_recommendations)
+        
     except Exception as e:
-        print(f"Error getting recommendations: {str(e)}")
-        return jsonify([]), 500
+        app.logger.error(f"Error in get_recommendations route: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/get_details', methods=['POST'])
 def get_details():
@@ -386,7 +381,7 @@ def get_details():
                         'videos': details.get('videos', {'results': []}),
                         'overview': details.get('overview', 'No overview available'),
                         'title': details.get('title') or details.get('name', 'Unknown Title'),
-                        'vote_average': float(details.get('vote_average', 0)) / 2,  # Convert to 5-point scale
+                        'vote_average': float(details.get('vote_average', 0)),  # Keep original 10-point scale
                         'keywords': details.get('keywords', {}).get('keywords', []),
                         'user_rating': user_rating
                     })
@@ -452,7 +447,7 @@ def delete_rating(rating_id):
 
 @app.route('/recommendations')
 @login_required
-def recommendations_page():
+def recommendations():
     return render_template('recommendations.html')
 
 @app.route('/top_rated/<media_type>')

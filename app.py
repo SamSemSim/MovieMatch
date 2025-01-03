@@ -1,33 +1,47 @@
-from flask import Flask
+from flask import Flask, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 import os
 from dotenv import load_dotenv
 from datetime import datetime
+from config import setup_logging, init_cache
 
 # Load environment variables
 load_dotenv()
 
+# Create Flask app with configuration
 app = Flask(__name__)
 
-# Ensure SECRET_KEY is set in production
-if not os.environ.get('SECRET_KEY') and os.environ.get('FLASK_ENV') == 'production':
-    raise RuntimeError('SECRET_KEY must be set in production')
+# Load configuration
+class Config:
+    # Basic Flask configuration
+    DEBUG = os.environ.get('FLASK_ENV') != 'production'  # Debug mode if not in production
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-key-please-change'
+    
+    # Database configuration
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///moviematch.db'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # API Keys
+    TMDB_API_KEY = os.environ.get('TMDB_API_KEY')
+    
+    # Security configurations
+    SESSION_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    
+    # Cache configuration
+    CACHE_TYPE = 'simple'
+    CACHE_DEFAULT_TIMEOUT = 300
 
-# Database configuration
-# Using SQLite with optimized settings
-db_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance', 'movies.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}?timeout=20&check_same_thread=False'
+app.config.from_object(Config)
 
-# SQLite optimizations
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,  # Enable connection health checks
-    'pool_recycle': 280,    # Recycle connections after ~4.5 minutes
-}
+# Set up logging
+setup_logging(app)
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
+# Initialize cache
+cache = init_cache(app)
 
 # Additional security headers
 @app.after_request
@@ -36,6 +50,7 @@ def add_security_headers(response):
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' https://image.tmdb.org data:; font-src 'self' https://cdnjs.cloudflare.com; frame-src 'self' https://www.youtube.com;"
     return response
 
 # Initialize database
@@ -53,8 +68,17 @@ def load_user(user_id):
     from models.user import User
     return User.query.get(int(user_id))
 
-# Ensure the instance folder exists
-os.makedirs(os.path.dirname(db_path), exist_ok=True)
+# Error handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    app.logger.error(f'Page not found: {request.url}')
+    return render_template('errors/404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    app.logger.error(f'Server Error: {error}')
+    return render_template('errors/500.html'), 500
 
 # Add datetime filter
 @app.template_filter('datetime')

@@ -44,6 +44,10 @@ instance/
 
 # Logs
 *.log
+logs/
+
+# Cache
+cache/
 
 # OS generated files
 .DS_Store

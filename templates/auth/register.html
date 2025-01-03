@@ -49,8 +49,14 @@
         box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2);
     }
 
-    .btn-register {
-        width: 100%;
+    .auth-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .btn-register, .btn-auth {
+        flex: 1;
         padding: 0.75rem;
         background: var(--accent-color);
         border: none;
@@ -59,28 +65,13 @@
         font-weight: 600;
         font-size: 1rem;
         transition: all 0.3s ease;
-    }
-
-    .btn-register:hover {
-        background: var(--accent-hover);
-        transform: translateY(-2px);
-    }
-
-    .login-link {
-        text-align: center;
-        margin-top: 1.5rem;
-        color: var(--text-secondary);
-    }
-
-    .login-link a {
-        color: var(--accent-color);
         text-decoration: none;
-        font-weight: 500;
-        transition: color 0.3s ease;
+        text-align: center;
+        cursor: pointer;
     }
 
-    .login-link a:hover {
-        color: var(--accent-hover);
+    .btn-register:hover, .btn-auth:hover {
+        background: var(--accent-hover);
     }
 
     .flash-messages {
@@ -184,12 +175,11 @@
             <label for="confirm_password" class="form-label">Confirm Password</label>
             <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
         </div>
-        <button type="submit" class="btn btn-register">Create Account</button>
+        <div class="auth-buttons">
+            <button type="submit" class="btn-register">Register</button>
+            <a href="{{ url_for('login') }}" class="btn-auth">Login</a>
+        </div>
     </form>
-    
-    <div class="login-link">
-        Already have an account? <a href="{{ url_for('login') }}">Login here</a>
-    </div>
 </div>
 {% endblock %}
 

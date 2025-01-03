@@ -1,134 +1,80 @@
-import os
 import requests
-from dotenv import load_dotenv
-from datetime import datetime
+import os
+from flask import current_app
+from config.cache_config import cache
 
-load_dotenv()
-
-TMDB_API_KEY = os.getenv('TMDB_API_KEY')
+TMDB_API_KEY = os.environ.get('TMDB_API_KEY')
 if not TMDB_API_KEY:
-    raise ValueError("TMDB_API_KEY not found in environment variables. Please add it to your .env file.")
+    raise ValueError("TMDB_API_KEY not found in environment variables")
 
 TMDB_BASE_URL = 'https://api.themoviedb.org/3'
 
-def search_media(query, media_type):
-    """Search for movies or TV shows using TMDB API"""
-    if not query:
-        print("No query provided")
-        return []
-        
+def get_endpoint_type(media_type):
+    """Convert internal media type to TMDB API endpoint type"""
+    if media_type == 'tv':
+        return 'tv'
+    return 'movie'
+
+@cache.memoize(timeout=300)  # Cache for 5 minutes
+def search_media(query, media_type='movie'):
     try:
+        endpoint_type = get_endpoint_type(media_type)
         response = requests.get(
-            f'{TMDB_BASE_URL}/search/{media_type}',
+            f'{TMDB_BASE_URL}/search/{endpoint_type}',
             params={
                 'api_key': TMDB_API_KEY,
                 'query': query,
                 'language': 'en-US',
-                'append_to_response': 'videos'
+                'page': 1
             }
         )
-        
-        print(f"TMDB API Response Status: {response.status_code}")  # Debug log
-        
-        if response.status_code == 200:
-            data = response.json()
-            results = data.get('results', [])
-            print(f"TMDB found {len(results)} results")  # Debug log
-            
-            # Add media_type to each result
-            for result in results:
-                result['media_type'] = media_type
-                
-            return results
-            
-        print(f"TMDB API error: {response.status_code}")
-        return []
-        
-    except requests.exceptions.Timeout:
-        print("TMDB API timeout")
-        return []
-    except requests.exceptions.RequestException as e:
-        print(f"TMDB API request error: {str(e)}")
-        return []
+        response.raise_for_status()
+        results = response.json().get('results', [])
+        # Add media_type to each result
+        for result in results:
+            result['media_type'] = media_type
+        return results
     except Exception as e:
-        print(f"Error searching {media_type}: {str(e)}")
+        current_app.logger.error(f"Error searching {media_type}: {str(e)}")
         return []
 
-def fetch_movie_details(tmdb_id, media_type):
-    """Fetch detailed movie information including keywords and genres"""
+@cache.memoize(timeout=3600)  # Cache for 1 hour
+def fetch_movie_details(movie_id, media_type='movie'):
     try:
-        # Get basic details
-        endpoint = 'movie' if media_type == 'movie' else 'tv'
+        endpoint_type = get_endpoint_type(media_type)
         response = requests.get(
-            f'{TMDB_BASE_URL}/{endpoint}/{tmdb_id}',
+            f'{TMDB_BASE_URL}/{endpoint_type}/{movie_id}',
             params={
                 'api_key': TMDB_API_KEY,
                 'language': 'en-US',
-                'append_to_response': 'videos,keywords'
+                'append_to_response': 'keywords,videos'
             }
         )
-        
-        if response.status_code != 200:
-            print(f"Error fetching details: {response.status_code}")
-            return None
-            
+        response.raise_for_status()
         details = response.json()
         
-        # Extract genres
-        genres = details.get('genres', [])
-        
-        # Extract keywords
-        keywords = []
+        # Add keywords as a string
         if 'keywords' in details:
-            if media_type == 'movie':
-                keywords = [kw['name'] for kw in details['keywords'].get('keywords', [])]
-            else:
-                keywords = [kw['name'] for kw in details['keywords'].get('results', [])]
+            keywords = details['keywords'].get('keywords', [])
+            details['keywords'] = ' '.join([k['name'] for k in keywords])
         
-        return {
-            'genres': genres,
-            'overview': details.get('overview', ''),
-            'keywords': ' '.join(keywords),
-            'vote_average': float(details.get('vote_average', 0)),
-            'popularity': float(details.get('popularity', 0)),
-            'poster_path': details.get('poster_path', ''),
-            'videos': details.get('videos', {'results': []}),
-            'runtime': details.get('runtime'),
-            'release_date': details.get('release_date') or details.get('first_air_date')
-        }
+        return details
     except Exception as e:
-        print(f"Error fetching details: {str(e)}")
+        current_app.logger.error(f"Error fetching {media_type} details: {str(e)}")
         return None
 
-def get_media_details(media_type, tmdb_id):
-    """Get detailed information including videos"""
+@cache.memoize(timeout=3600)  # Cache for 1 hour
+def get_recommendations_for_item(item_id, media_type):
     try:
-        endpoint = 'movie' if media_type == 'movie' else 'tv'
-        response = requests.get(
-            f'{TMDB_BASE_URL}/{endpoint}/{tmdb_id}',
-            params={
-                'api_key': TMDB_API_KEY,
-                'language': 'en-US',
-                'append_to_response': 'videos,keywords'
-            }
-        )
+        endpoint_type = get_endpoint_type(media_type)
+        current_app.logger.info(f"Getting recommendations for {endpoint_type} {item_id}")
         
-        if response.status_code == 200:
-            details = response.json()
-            # Add media_type to the response
-            details['media_type'] = media_type
-            return details
-        print(f"Error getting media details: {response.status_code}")
-        return None
-    except Exception as e:
-        print(f"Error getting media details: {str(e)}")
-        return None
-
-def get_recommendations_for_item(media_type, tmdb_id):
-    """Get TMDB recommendations for a specific item"""
-    try:
+        # Log the full URL being requested
+        url = f'{TMDB_BASE_URL}/{endpoint_type}/{item_id}/recommendations'
+        current_app.logger.info(f"Making request to: {url}")
+        
         response = requests.get(
-            f'{TMDB_BASE_URL}/{media_type}/{tmdb_id}/recommendations',
+            url,
             params={
                 'api_key': TMDB_API_KEY,
                 'language': 'en-US',
@@ -136,28 +82,59 @@ def get_recommendations_for_item(media_type, tmdb_id):
             }
         )
         
-        if response.status_code == 200:
-            results = response.json().get('results', [])
-            # Add media_type and format each result
-            formatted_results = []
-            for result in results:
-                if result:
-                    # Format the result
-                    formatted_result = {
-                        'id': result.get('id'),
-                        'title': result.get('title') or result.get('name', 'Unknown Title'),
-                        'overview': result.get('overview', 'No overview available'),
-                        'poster_path': result.get('poster_path', ''),
-                        'vote_average': float(result.get('vote_average', 0)),
-                        'media_type': media_type,
-                        'release_date': result.get('release_date') or result.get('first_air_date', 'N/A'),
-                        'genres': result.get('genres', [])
-                    }
-                    formatted_results.append(formatted_result)
-            return formatted_results
+        # Log the response status and URL
+        current_app.logger.info(f"Response status: {response.status_code}")
+        current_app.logger.info(f"Full URL with params: {response.url}")
+        
+        if response.status_code == 404:
+            current_app.logger.error(f"404 error: Item not found for {endpoint_type} {item_id}")
+            return []
             
-        print(f"Error getting recommendations: {response.status_code}")
+        response.raise_for_status()
+        results = response.json().get('results', [])
+        
+        current_app.logger.info(f"Found {len(results)} recommendations")
+        
+        # Process results
+        processed_results = []
+        for item in results:
+            if item:  # Only process valid items
+                processed_item = {
+                    'id': item.get('id'),
+                    'title': item.get('title') if media_type == 'movie' else item.get('name'),
+                    'overview': item.get('overview', ''),
+                    'poster_path': item.get('poster_path', ''),
+                    'vote_average': float(item.get('vote_average', 0)),
+                    'release_date': item.get('release_date') if media_type == 'movie' else item.get('first_air_date'),
+                    'media_type': media_type,
+                    'genres': item.get('genre_ids', [])
+                }
+                processed_results.append(processed_item)
+        
+        current_app.logger.info(f"Processed {len(processed_results)} valid recommendations")
+        return processed_results
+        
+    except requests.exceptions.RequestException as e:
+        current_app.logger.error(f"Request error getting recommendations for {media_type} {item_id}: {str(e)}")
         return []
     except Exception as e:
-        print(f"Error getting recommendations: {str(e)}")
-        return [] 
+        current_app.logger.error(f"Error getting recommendations for {media_type} {item_id}: {str(e)}")
+        return []
+
+@cache.memoize(timeout=3600)  # Cache for 1 hour
+def get_media_details(media_id, media_type):
+    try:
+        endpoint_type = get_endpoint_type(media_type)
+        response = requests.get(
+            f'{TMDB_BASE_URL}/{endpoint_type}/{media_id}',
+            params={
+                'api_key': TMDB_API_KEY,
+                'language': 'en-US',
+                'append_to_response': 'videos,credits'
+            }
+        )
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        current_app.logger.error(f"Error getting media details: {str(e)}")
+        return None 

@@ -53,24 +53,52 @@
         background: var(--card-bg);
         color: var(--text-primary);
         border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     }
 
     .modal-header {
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--card-bg);
+        padding: 1rem;
+    }
+
+    .modal-body {
+        background: var(--card-bg);
+        padding: 1rem;
     }
 
     .modal-title {
         font-size: 1.5rem;
         font-weight: 600;
+        color: var(--text-primary);
     }
 
     .btn-close {
-        filter: invert(1);
+        filter: invert(1) brightness(200%);
     }
 
     .modal-poster {
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        background: var(--card-bg);
+        width: 100%;
+        height: auto;
+        object-fit: cover;
+    }
+
+    .modal-dialog {
+        background: var(--card-bg);
+    }
+
+    /* Fix for white background in Bootstrap rows and columns */
+    .row {
+        margin: 0;
+        background: var(--card-bg);
+    }
+
+    .col-md-4, .col-md-8 {
+        background: var(--card-bg);
+        padding: 0.5rem;
     }
 
     .modal-year {
@@ -107,9 +135,23 @@
         color: var(--text-secondary);
     }
 
+    .modal-details .genres,
+    .modal-details .runtime,
+    .modal-details .release-date {
+        color: var(--text-secondary);
+    }
+
     .user-rating-text {
         color: var(--text-secondary);
         font-size: 0.9rem;
+    }
+
+    .tmdb-rating {
+        color: var(--text-secondary);
+    }
+
+    .tmdb-rating-value {
+        color: var(--text-primary);
     }
 
     .btn-trailer {
@@ -129,6 +171,21 @@
         background: black;
         border-radius: 8px;
         overflow: hidden;
+    }
+
+    /* Modal backdrop color */
+    .modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    /* Modal animation */
+    .modal.fade .modal-dialog {
+        transform: scale(0.95);
+        transition: transform 0.2s ease-out;
+    }
+
+    .modal.show .modal-dialog {
+        transform: scale(1);
     }
 </style>
 
@@ -162,7 +219,7 @@ document.addEventListener('DOMContentLoaded', function() {
             modal.querySelector('.modal-poster').src = `https://image.tmdb.org/t/p/w500${data.poster_path}`;
             modal.querySelector('.modal-year').textContent = data.release_date ? new Date(data.release_date).getFullYear() : 'N/A';
             modal.querySelector('.modal-overview').textContent = data.overview;
-            modal.querySelector('.tmdb-rating-value').textContent = `${(data.vote_average/2).toFixed(1)}/5`;
+            modal.querySelector('.tmdb-rating-value').textContent = `${data.vote_average.toFixed(1)}/5`;
             
             // Update genres
             const genres = data.genres.map(genre => genre.name).join(', ');

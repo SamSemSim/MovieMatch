@@ -26,19 +26,20 @@
             color: var(--text-primary);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 100vh;
-            padding-top: 80px;
+            padding-top: 60px;
         }
 
         /* Navbar Styles */
         .navbar {
             background-color: var(--primary-bg) !important;
-            padding: 1rem 0;
+            padding: 0.5rem 0;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             position: fixed;
             top: 0;
             width: 100%;
             z-index: 1000;
             transition: background-color 0.3s;
+            height: 60px;
         }
 
         .navbar.scrolled {
@@ -48,15 +49,17 @@
 
         .navbar-brand {
             color: var(--accent-color) !important;
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: 700;
             letter-spacing: 1px;
+            padding: 0;
         }
 
         .nav-link {
             color: var(--text-primary) !important;
-            font-size: 1.1rem;
-            margin: 0 1rem;
+            font-size: 1rem;
+            margin: 0 0.75rem;
+            padding: 0.5rem 0;
             position: relative;
             transition: color 0.3s;
         }
@@ -66,7 +69,7 @@
             position: absolute;
             width: 0;
             height: 2px;
-            bottom: -5px;
+            bottom: 0;
             left: 0;
             background-color: var(--accent-color);
             transition: width 0.3s;
@@ -80,19 +83,20 @@
         /* User Menu Styles */
         .user-menu {
             position: relative;
-            margin-left: 1rem;
+            margin-left: 0.5rem;
         }
 
         .user-menu .dropdown-toggle {
             background: transparent;
             border: none;
             color: var(--text-primary);
-            padding: 0.5rem 1rem;
+            padding: 0.25rem 0.75rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
             font-weight: 600;
             transition: all 0.3s ease;
+            height: 40px;
         }
 
         .user-menu .dropdown-toggle:hover,
@@ -105,25 +109,25 @@
         }
 
         .user-menu .avatar {
-            width: 35px;
-            height: 35px;
+            width: 30px;
+            height: 30px;
             background: linear-gradient(45deg, var(--accent-color), #ff4b2b);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 1.2rem;
-            margin-right: 0.5rem;
+            font-size: 1rem;
+            margin-right: 0.25rem;
         }
 
         .user-menu .username {
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 0.9rem;
             background: linear-gradient(45deg, var(--accent-color), #ff4b2b);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-right: 0.5rem;
+            margin-right: 0.25rem;
         }
 
         .user-menu .dropdown-menu {
@@ -192,82 +196,57 @@
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('home') }}">
-                <i class="fas fa-film me-2"></i>MovieMatch
-            </a>
+            <a class="navbar-brand" href="{{ url_for('home') }}">MovieMatch</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <i class="fas fa-bars" style="color: var(--text-primary);"></i>
+                <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}">
-                            <i class="fas fa-home me-2"></i>Home
+                            <i class="fas fa-home"></i> Home
                         </a>
                     </li>
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'my_ratings' %}active{% endif %}" href="{{ url_for('my_ratings') }}">
-                            <i class="fas fa-star me-2"></i>My Ratings
+                        <a class="nav-link {% if request.endpoint == 'recommendations' %}active{% endif %}" href="{{ url_for('recommendations') }}">
+                            <i class="fas fa-star"></i> Recommendations
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'recommendations_page' %}active{% endif %}" href="{{ url_for('recommendations_page') }}">
-                            <i class="fas fa-thumbs-up me-2"></i>Recommendations
+                        <a class="nav-link {% if request.endpoint == 'my_ratings' %}active{% endif %}" href="{{ url_for('my_ratings') }}">
+                            <i class="fas fa-list"></i> My Ratings
                         </a>
                     </li>
                     {% endif %}
                 </ul>
-                
-                {% if current_user.is_authenticated %}
-                <div class="user-menu dropdown">
-                    <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <div class="avatar">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <span class="username">{{ current_user.username }}</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li>
-                            <a class="dropdown-item" href="{{ url_for('profile') }}">
-                                <i class="fas fa-user-circle"></i>
-                                Profile
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{{ url_for('my_ratings') }}">
-                                <i class="fas fa-star"></i>
-                                My Ratings
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{{ url_for('recommendations_page') }}">
-                                <i class="fas fa-thumbs-up"></i>
-                                Recommendations
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
-                                <i class="fas fa-sign-out-alt"></i>
-                                Logout
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-                {% else %}
-                <div class="auth-buttons">
-                    <a href="{{ url_for('login') }}" class="btn btn-login">
-                        <i class="fas fa-sign-in-alt me-2"></i>Login
-                    </a>
-                    <a href="{{ url_for('register') }}" class="btn btn-register">
-                        <i class="fas fa-user-plus me-2"></i>Register
-                    </a>
-                </div>
-                {% endif %}
+                <ul class="navbar-nav">
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}" href="{{ url_for('profile') }}">
+                            <i class="fas fa-user"></i> Profile
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'login' %}active{% endif %}" href="{{ url_for('login') }}">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'register' %}active{% endif %}" href="{{ url_for('register') }}">
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
             </div>
         </div>
     </nav>

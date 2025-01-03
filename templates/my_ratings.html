@@ -4,6 +4,80 @@
 
 {% block additional_styles %}
 <style>
+    /* Page Background */
+    body {
+        background: var(--primary-bg);
+        color: var(--text-primary);
+    }
+
+    /* Container styles */
+    .container {
+        padding: 2rem 1rem;
+    }
+
+    h1 {
+        color: var(--text-primary);
+    }
+
+    /* Modal Styles */
+    .modal-content {
+        background: var(--card-bg);
+        color: var(--text-primary);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--card-bg);
+        padding: 1rem;
+    }
+
+    .modal-body {
+        background: var(--card-bg);
+        padding: 1rem;
+    }
+
+    .modal-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .btn-close {
+        filter: invert(1) brightness(200%);
+    }
+
+    .modal-dialog {
+        background: var(--card-bg);
+    }
+
+    /* Fix for white background in Bootstrap rows and columns */
+    .modal .row {
+        margin: 0;
+        background: var(--card-bg);
+    }
+
+    .modal .col-md-4, 
+    .modal .col-md-8 {
+        background: var(--card-bg);
+        padding: 0.5rem;
+    }
+
+    .modal-poster {
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        background: var(--card-bg);
+        width: 100%;
+        height: auto;
+        object-fit: cover;
+    }
+
+    /* Modal backdrop color */
+    .modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.8);
+    }
+
     /* Media Cards */
     .media-card {
         background: var(--card-bg);
@@ -220,6 +294,34 @@
     .media-card:hover .delete-rating {
         opacity: 1;
     }
+
+    /* Trailer button and container styles */
+    .btn-trailer {
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-trailer:hover {
+        background: var(--accent-hover);
+        transform: translateY(-2px);
+    }
+
+    .trailer-container {
+        margin-top: 2rem;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .trailer-frame {
+        border: none;
+        background: #000;
+    }
 </style>
 {% endblock %}
 
@@ -237,9 +339,6 @@
             </button>
             <button class="media-type-btn" data-type="tv">
                 <i class="fas fa-tv me-2"></i>TV Shows
-            </button>
-            <button class="media-type-btn" data-type="anime">
-                <i class="fas fa-play-circle me-2"></i>Anime
             </button>
         </div>
         
@@ -283,7 +382,7 @@
                     <span class="rating-value">{{ media.rating }}/5</span>
                 </div>
                 <div class="tmdb-rating">
-                    <span class="text-secondary">TMDB: {{ '%.1f'|format(media.vote_average/2) }}/5</span>
+                    <span class="text-secondary">TMDB: {{ '%.1f'|format(media.vote_average) }}/10</span>
                 </div>
                 <p class="media-overview">{{ media.overview }}</p>
                 {% if media.genres %}
@@ -311,6 +410,9 @@
                 <div class="row">
                     <div class="col-md-4">
                         <img class="modal-poster img-fluid" alt="Media Poster">
+                        <button class="btn btn-trailer mt-3 w-100" style="display: none;">
+                            <i class="fas fa-play me-2"></i>Watch Trailer
+                        </button>
                     </div>
                     <div class="col-md-8">
                         <div class="modal-year mb-2"></div>
@@ -334,6 +436,12 @@
                         </div>
                     </div>
                 </div>
+                <!-- Trailer Container -->
+                <div class="trailer-container mt-3" style="display: none;">
+                    <div class="ratio ratio-16x9">
+                        <iframe class="trailer-frame" src="" allowfullscreen></iframe>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -348,6 +456,95 @@ document.addEventListener('DOMContentLoaded', function() {
     const mediaGrid = document.querySelector('.media-grid');
     const mediaDetailsModal = new bootstrap.Modal(document.getElementById('mediaDetailsModal'));
 
+    // Function to show media details in modal
+    function showMediaDetails(mediaId, mediaType) {
+        fetch('/get_details', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                media_type: mediaType,
+                tmdb_id: mediaId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const modal = document.getElementById('mediaDetailsModal');
+            
+            // Update modal content
+            modal.querySelector('.modal-title').textContent = data.title;
+            modal.querySelector('.modal-poster').src = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : '/static/images/no-poster.svg';
+            modal.querySelector('.modal-year').textContent = data.release_date ? new Date(data.release_date).getFullYear() : 'N/A';
+            modal.querySelector('.modal-overview').textContent = data.overview || 'No overview available';
+            modal.querySelector('.tmdb-rating-value').textContent = `${data.vote_average.toFixed(1)}/10`;
+            
+            // Update genres
+            const genres = data.genres.map(genre => genre.name).join(', ');
+            modal.querySelector('.genres').textContent = `Genres: ${genres}`;
+            
+            // Update runtime
+            if (data.runtime) {
+                const hours = Math.floor(data.runtime / 60);
+                const minutes = data.runtime % 60;
+                modal.querySelector('.runtime').textContent = `Runtime: ${hours}h ${minutes}m`;
+            } else {
+                modal.querySelector('.runtime').textContent = '';
+            }
+            
+            // Update release date
+            modal.querySelector('.release-date').textContent = `Release Date: ${data.release_date || 'N/A'}`;
+
+            // Initialize rating stars
+            const stars = modal.querySelectorAll('.rating-stars .star');
+            stars.forEach((star, index) => {
+                star.classList.remove('active');
+                star.onclick = () => rateMedia(mediaId, mediaType, index + 1);
+                if (data.user_rating && index < data.user_rating) {
+                    star.classList.add('active');
+                }
+            });
+
+            // Update rating text
+            modal.querySelector('.user-rating-text').textContent = data.user_rating ? 
+                `Your Rating: ${data.user_rating}/5` : 'Your Rating: Not rated yet';
+
+            // Handle trailer
+            const trailerBtn = modal.querySelector('.btn-trailer');
+            const trailerContainer = modal.querySelector('.trailer-container');
+            const trailerFrame = modal.querySelector('.trailer-frame');
+
+            // Find trailer video
+            const trailer = data.videos && data.videos.results && 
+                data.videos.results.find(video => video.type === 'Trailer' && video.site === 'YouTube');
+
+            if (trailer) {
+                trailerBtn.style.display = 'block';
+                trailerBtn.onclick = () => {
+                    trailerContainer.style.display = 'block';
+                    trailerFrame.src = `https://www.youtube.com/embed/${trailer.key}`;
+                };
+            } else {
+                trailerBtn.style.display = 'none';
+                trailerContainer.style.display = 'none';
+            }
+
+            // Clean up trailer when modal is closed
+            const modalInstance = new bootstrap.Modal(modal);
+            modal.addEventListener('hidden.bs.modal', () => {
+                trailerFrame.src = '';
+                trailerContainer.style.display = 'none';
+            });
+
+            // Show modal
+            modalInstance.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Error loading media details. Please try again.', 'error');
+        });
+    }
+
     // Media card click handler
     document.querySelectorAll('.media-card').forEach(card => {
         card.addEventListener('click', function(e) {
@@ -358,65 +555,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const mediaId = mediaType === 'anime' ? this.dataset.malId : this.dataset.tmdbId;
 
             // Fetch and show media details
-            fetch('/get_details', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    media_type: mediaType,
-                    tmdb_id: mediaId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                const modal = document.getElementById('mediaDetailsModal');
-                
-                // Update modal content
-                modal.querySelector('.modal-title').textContent = data.title;
-                modal.querySelector('.modal-poster').src = mediaType === 'anime' ? data.poster_path : `https://image.tmdb.org/t/p/w500${data.poster_path}`;
-                modal.querySelector('.modal-year').textContent = data.release_date ? new Date(data.release_date).getFullYear() : 'Release date unknown';
-                modal.querySelector('.modal-overview').textContent = data.overview;
-                modal.querySelector('.tmdb-rating-value').textContent = `${(data.vote_average).toFixed(1)}/5`;
-
-                // Update genres
-                const genresHtml = data.genres.map(genre => `<span class="genre-badge">${genre.name}</span>`).join('');
-                modal.querySelector('.genres').innerHTML = genresHtml;
-
-                // Update runtime if available
-                if (data.runtime) {
-                    modal.querySelector('.runtime').textContent = `Runtime: ${data.runtime} minutes`;
-                } else {
-                    modal.querySelector('.runtime').textContent = '';
-                }
-
-                // Update release date
-                modal.querySelector('.release-date').textContent = `Release Date: ${data.release_date || 'Unknown'}`;
-
-                // Update user rating if available
-                const userRatingText = modal.querySelector('.user-rating-text');
-                const stars = modal.querySelectorAll('.rating-stars .star');
-                if (data.user_rating) {
-                    userRatingText.textContent = `Your Rating: ${data.user_rating}/5`;
-                    stars.forEach((star, index) => {
-                        star.classList.toggle('active', index < data.user_rating);
-                    });
-                } else {
-                    userRatingText.textContent = 'Your Rating: Not rated yet';
-                    stars.forEach(star => star.classList.remove('active'));
-                }
-
-                // Store media info for rating
-                modal.dataset.mediaId = mediaId;
-                modal.dataset.mediaType = mediaType;
-
-                // Show modal
-                mediaDetailsModal.show();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showToast('Error loading media details. Please try again.', 'error');
-            });
+            showMediaDetails(mediaId, mediaType);
         });
     });
 

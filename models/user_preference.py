@@ -17,6 +17,7 @@ class UserPreference(db.Model):
     popularity = db.Column(db.Float)
     image_url = db.Column(db.String(500))  # For storing direct image URLs (especially for anime)
     poster_path = db.Column(db.String(500))  # For TMDB poster paths
+    release_date = db.Column(db.String(20))  # For storing release dates
     
     def to_dict(self):
         return {
@@ -32,5 +33,6 @@ class UserPreference(db.Model):
             'popularity': self.popularity,
             'poster_path': self.poster_path,
             'image_url': self.image_url,
+            'release_date': self.release_date,
             'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None
         } 
