@@ -62,6 +62,14 @@ def add_security_headers(response):
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+# Create tables if they don't exist
+with app.app_context():
+    try:
+        db.create_all()
+        app.logger.info("Database tables created successfully")
+    except Exception as e:
+        app.logger.error(f"Error creating database tables: {str(e)}")
+
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
