@@ -13,8 +13,10 @@ load_dotenv()
 # Create Flask app with configuration
 app = Flask(__name__)
 
-# Ensure instance directory exists
-os.makedirs(os.path.join(app.root_path, 'instance'), exist_ok=True)
+# Ensure instance directory exists with proper permissions
+instance_path = os.path.join(app.root_path, 'instance')
+os.makedirs(instance_path, exist_ok=True)
+os.chmod(instance_path, 0o777)  # Give full permissions to the instance directory
 
 # Load configuration
 class Config:
@@ -23,7 +25,7 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-key-please-change'
     
     # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///moviematch.db'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or f'sqlite:///{os.path.join(instance_path, "moviematch.db")}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # API Keys

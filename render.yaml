@@ -4,7 +4,10 @@ services:
     env: python
     buildCommand: |
       pip install -r requirements.txt
+      mkdir -p instance
+      chmod 777 instance
       flask db upgrade
+      python -c "from app import db; db.create_all()"
     startCommand: gunicorn -c gunicorn_config.py app:app
     envVars:
       - key: PYTHON_VERSION
